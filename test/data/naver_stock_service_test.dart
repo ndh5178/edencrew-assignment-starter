@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -65,4 +66,81 @@ void main() {
       throwsA(isA<StockServiceException>()),
     );
   });
+
+  test('종목 메타데이터 응답을 Stock 모델로 변환한다', () async {
+    final MockClient client = MockClient((http.Request request) async {
+      final Map<String, dynamic> responseBody = <String, dynamic>{
+        'symbolCode': '005930',
+        'stockName': '삼성전자',
+        'stockExchangeNameKor': '코스피',
+      };
+
+      return http.Response.bytes(
+        utf8.encode(jsonEncode(responseBody)),
+        200,
+        headers: <String, String>{
+          'content-type': 'application/json; charset=utf-8',
+        },
+      );
+    });
+    final NaverStockService service = NaverStockService(client: client);
+
+    final Stock stock = await service.fetchStockMetadata('005930');
+
+    expect(stock.symbol, '005930');
+    expect(stock.name, '삼성전자');
+    expect(stock.market, '코스피');
+  });
+
+  test('여러 종목의 실시간 시세를 한 번에 변환한다', () async {
+    final MockClient client = MockClient((http.Request request) async {
+      expect(
+        request.url.queryParameters['query'],
+        'SERVICE_ITEM:005930,000660',
+      );
+
+      final Map<String, dynamic> responseBody = <String, dynamic>{
+        'resultCode': 'success',
+        'result': <String, dynamic>{
+          'areas': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'name': 'SERVICE_ITEM',
+              'datas': <Map<String, dynamic>>[
+                _quoteJson('005930', 179700, 180100),
+                _quoteJson('000660', 412500, 403000),
+              ],
+            },
+          ],
+        },
+      };
+
+      return http.Response(jsonEncode(responseBody), 200);
+    });
+    final NaverStockService service = NaverStockService(client: client);
+
+    final Map<String, StockQuote> quotes = await service.fetchQuotes(
+      <String>['005930', '000660'],
+    );
+
+    expect(quotes, hasLength(2));
+    expect(quotes['005930']!.changeAmount, -400);
+    expect(quotes['000660']!.changeAmount, 9500);
+  });
+}
+
+Map<String, dynamic> _quoteJson(
+  String symbol,
+  int currentPrice,
+  int previousClose,
+) {
+  return <String, dynamic>{
+    'cd': symbol,
+    'nv': currentPrice,
+    'pcv': previousClose,
+    'ov': currentPrice,
+    'hv': currentPrice,
+    'lv': currentPrice,
+    'aq': 1000,
+    'countOfListedStock': 1000000,
+  };
 }

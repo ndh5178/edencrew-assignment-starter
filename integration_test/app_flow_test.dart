@@ -1,6 +1,7 @@
 import 'package:edencrew_assignment_starter/app/app.dart';
 import 'package:edencrew_assignment_starter/data/favorite_storage.dart';
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,9 +21,12 @@ void main() {
   }
 
   Future<void> launchApp(WidgetTester tester) async {
+    final _FakeStockService stockService = _FakeStockService();
+
     runApp(
       EdencrewAssignmentApp(
-        stockSearchService: _FakeStockSearchService(),
+        stockSearchService: stockService,
+        watchlistService: stockService,
         favoriteStorage: favoriteStorage,
       ),
     );
@@ -100,6 +104,13 @@ void main() {
       expect(find.text('관심이 등록되었습니다'), findsOneWidget);
       expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
       await pauseForObservation(tester);
+
+      await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('watchlist_item_005930')), findsOneWidget);
+      expect(find.text('삼성전자'), findsOneWidget);
+      await pauseForObservation(tester);
     },
   );
 
@@ -110,15 +121,16 @@ void main() {
 
       await tester.tap(find.byKey(const Key('watchlist_sort_button')));
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       expect(find.text('정렬'), findsOneWidget);
 
       await tester.tap(find.text('현재가순'));
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       expect(find.text('현재가순'), findsOneWidget);
     },
-    skip: true,
   );
 
   testWidgets(
@@ -198,7 +210,7 @@ void main() {
   );
 }
 
-class _FakeStockSearchService implements StockSearchService {
+class _FakeStockService implements StockSearchService, WatchlistService {
   @override
   Future<List<Stock>> searchStocks(String query) async {
     if (!query.contains('삼성')) {
@@ -210,6 +222,43 @@ class _FakeStockSearchService implements StockSearchService {
       Stock(symbol: '005935', name: '삼성전자우', market: '코스피'),
       Stock(symbol: '207940', name: '삼성바이오로직스', market: '코스피'),
     ];
+  }
+
+  @override
+  Future<Stock> fetchStockMetadata(String symbol) async {
+    if (symbol == '005930') {
+      return const Stock(
+        symbol: '005930',
+        name: '삼성전자',
+        market: '코스피',
+      );
+    }
+
+    return Stock(symbol: symbol, name: '테스트 종목', market: '코스피');
+  }
+
+  @override
+  Future<Map<String, StockQuote>> fetchQuotes(
+    Iterable<String> symbols,
+  ) async {
+    final Map<String, StockQuote> quotes = <String, StockQuote>{};
+
+    for (final String symbol in symbols) {
+      if (symbol == '005930') {
+        quotes[symbol] = const StockQuote(
+          symbol: '005930',
+          currentPrice: 179700,
+          previousClose: 180100,
+          openPrice: 172100,
+          highPrice: 181700,
+          lowPrice: 172000,
+          accumulatedTradingVolume: 29113466,
+          countOfListedStock: 5919637922,
+        );
+      }
+    }
+
+    return quotes;
   }
 
   @override
