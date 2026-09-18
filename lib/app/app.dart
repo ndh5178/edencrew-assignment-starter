@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../data/favorite_storage.dart';
 import '../features/search/search_screen.dart';
 import '../features/watchlist/watchlist_screen.dart';
 import '../data/naver_stock_service.dart';
+import '../features/favorites/favorite_controller.dart';
 import '../shared/widgets/app_bottom_navigation.dart';
 import '../theme/theme.dart';
 import 'app_controller.dart';
@@ -10,10 +14,12 @@ import 'app_controller.dart';
 class EdencrewAssignmentApp extends StatefulWidget {
   const EdencrewAssignmentApp({
     this.stockSearchService,
+    this.favoriteStorage,
     super.key,
   });
 
   final StockSearchService? stockSearchService;
+  final FavoriteStorage? favoriteStorage;
 
   @override
   State<EdencrewAssignmentApp> createState() {
@@ -25,6 +31,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
   late final AppController _appController;
   late final StockSearchService _stockSearchService;
   late final bool _ownsStockSearchService;
+  late final FavoriteController _favoriteController;
 
   @override
   void initState() {
@@ -32,11 +39,16 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
     _appController = AppController();
     _ownsStockSearchService = widget.stockSearchService == null;
     _stockSearchService = widget.stockSearchService ?? NaverStockService();
+    _favoriteController = FavoriteController(
+      storage: widget.favoriteStorage ?? SharedPreferencesFavoriteStorage(),
+    );
+    unawaited(_favoriteController.initialize());
   }
 
   @override
   void dispose() {
     _appController.dispose();
+    _favoriteController.dispose();
     if (_ownsStockSearchService) {
       _stockSearchService.close();
     }
@@ -52,6 +64,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
       home: AppShell(
         controller: _appController,
         stockSearchService: _stockSearchService,
+        favoriteController: _favoriteController,
       ),
     );
   }
@@ -61,11 +74,13 @@ class AppShell extends StatelessWidget {
   const AppShell({
     required this.controller,
     required this.stockSearchService,
+    required this.favoriteController,
     super.key,
   });
 
   final AppController controller;
   final StockSearchService stockSearchService;
+  final FavoriteController favoriteController;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +92,10 @@ class AppShell extends StatelessWidget {
             index: controller.selectedTabIndex,
             children: <Widget>[
               const WatchlistScreen(),
-              SearchScreen(searchService: stockSearchService),
+              SearchScreen(
+                searchService: stockSearchService,
+                favoriteController: favoriteController,
+              ),
             ],
           ),
           bottomNavigationBar: AppBottomNavigation(

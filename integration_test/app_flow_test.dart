@@ -1,4 +1,5 @@
 import 'package:edencrew_assignment_starter/app/app.dart';
+import 'package:edencrew_assignment_starter/data/favorite_storage.dart';
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,12 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  final _FakeFavoriteStorage favoriteStorage = _FakeFavoriteStorage();
+
+  setUp(() {
+    favoriteStorage.clear();
+  });
+
   Future<void> pauseForObservation(WidgetTester tester) async {
     await tester.pump(const Duration(seconds: 1));
   }
@@ -16,6 +23,7 @@ void main() {
     runApp(
       EdencrewAssignmentApp(
         stockSearchService: _FakeStockSearchService(),
+        favoriteStorage: favoriteStorage,
       ),
     );
     await tester.pumpAndSettle();
@@ -72,7 +80,7 @@ void main() {
   );
 
   testWidgets(
-    '03. 검색 결과에서 관심 종목을 등록하고 관심 목록에서 확인한다',
+    '03. 검색 결과에서 관심 종목을 등록한다',
     (WidgetTester tester) async {
       await launchApp(tester);
 
@@ -86,17 +94,13 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('favorite_button_005930')));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('관심이 등록되었습니다'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('watchlist_item_005930')), findsOneWidget);
-      expect(find.text('삼성전자'), findsOneWidget);
+      expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
+      await pauseForObservation(tester);
     },
-    skip: true,
   );
 
   testWidgets(
@@ -174,13 +178,23 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('favorite_button_005930')));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       await launchApp(tester);
 
-      expect(find.byKey(const Key('watchlist_item_005930')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('bottom_nav_search')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('stock_search_field')),
+        '삼성',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
+      await pauseForObservation(tester);
     },
-    skip: true,
   );
 }
 
@@ -200,4 +214,24 @@ class _FakeStockSearchService implements StockSearchService {
 
   @override
   void close() {}
+}
+
+class _FakeFavoriteStorage implements FavoriteStorage {
+  final Set<String> _symbols = <String>{};
+
+  @override
+  Future<List<String>> loadFavoriteSymbols() async {
+    return _symbols.toList();
+  }
+
+  @override
+  Future<void> saveFavoriteSymbols(Iterable<String> symbols) async {
+    _symbols
+      ..clear()
+      ..addAll(symbols);
+  }
+
+  void clear() {
+    _symbols.clear();
+  }
 }

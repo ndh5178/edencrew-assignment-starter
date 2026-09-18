@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/stock.dart';
 import '../../data/naver_stock_service.dart';
+import '../favorites/favorite_controller.dart';
 import '../../theme/theme.dart';
 import 'search_controller.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     required this.searchService,
+    required this.favoriteController,
     super.key,
   });
 
   final StockSearchService searchService;
+  final FavoriteController favoriteController;
 
   @override
   State<SearchScreen> createState() {
@@ -121,7 +124,10 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           Expanded(
             child: AnimatedBuilder(
-              animation: _searchController,
+              animation: Listenable.merge(<Listenable>[
+                _searchController,
+                widget.favoriteController,
+              ]),
               builder: (BuildContext context, Widget? child) {
                 return _buildSearchContent(context);
               },
@@ -147,12 +153,99 @@ class _SearchScreenState extends State<SearchScreen> {
         return _SearchResultList(
           stocks: _searchController.results,
           query: _searchController.query,
+          favoriteController: widget.favoriteController,
+          onFavoritePressed: _toggleFavorite,
         );
       case SearchStatus.empty:
         return _SearchEmptyView(query: _searchController.query);
       case SearchStatus.failure:
         return _SearchFailureView(onRetry: _searchController.retry);
     }
+  }
+
+  Future<void> _toggleFavorite(Stock stock) async {
+    try {
+      final FavoriteChange? change =
+          await widget.favoriteController.toggleFavorite(stock.symbol);
+
+      if (!mounted || change == null) {
+        return;
+      }
+
+      _showFavoriteToast(change);
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+
+      _showStorageFailureToast();
+    }
+  }
+
+  void _showFavoriteToast(FavoriteChange change) {
+    final AppColors colors = context.colors;
+    final AppDimens dimens = context.dimens;
+    final bool wasAdded = change == FavoriteChange.added;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: colors.surfaceSunken,
+        margin: EdgeInsets.fromLTRB(
+          dimens.space4,
+          0,
+          dimens.space4,
+          dimens.space3,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: dimens.space4,
+          vertical: dimens.space3,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(dimens.radiusLg),
+        ),
+        duration: const Duration(seconds: 2),
+        content: Row(
+          children: <Widget>[
+            Icon(
+              wasAdded ? Icons.star : Icons.star_border,
+              color: wasAdded
+                  ? colors.favoriteActive
+                  : colors.favoriteInactive,
+              size: 24,
+            ),
+            SizedBox(width: dimens.space3),
+            Text(
+              wasAdded ? '관심이 등록되었습니다' : '관심이 해제되었습니다',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 15,
+                fontWeight: AppTypography.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStorageFailureToast() {
+    final AppColors colors = context.colors;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: colors.surfaceSunken,
+        content: Text(
+          '관심 종목을 저장하지 못했습니다',
+          style: TextStyle(color: colors.textPrimary),
+        ),
+      ),
+    );
   }
 }
 
@@ -306,10 +399,14 @@ class _SearchResultList extends StatelessWidget {
   const _SearchResultList({
     required this.stocks,
     required this.query,
+    required this.favoriteController,
+    required this.onFavoritePressed,
   });
 
   final List<Stock> stocks;
   final String query;
+  final FavoriteController favoriteController;
+  final ValueChanged<Stock> onFavoritePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -326,7 +423,15 @@ class _SearchResultList extends StatelessWidget {
       itemBuilder: (BuildContext context, int index) {
         final Stock stock = stocks[index];
 
-        return _SearchResultRow(stock: stock, query: query);
+        return _SearchResultRow(
+          stock: stock,
+          query: query,
+          isFavorite: favoriteController.isFavorite(stock.symbol),
+          isUpdating: favoriteController.isUpdating(stock.symbol),
+          onFavoritePressed: () {
+            onFavoritePressed(stock);
+          },
+        );
       },
     );
   }
@@ -336,10 +441,16 @@ class _SearchResultRow extends StatelessWidget {
   const _SearchResultRow({
     required this.stock,
     required this.query,
+    required this.isFavorite,
+    required this.isUpdating,
+    required this.onFavoritePressed,
   });
 
   final Stock stock;
   final String query;
+  final bool isFavorite;
+  final bool isUpdating;
+  final VoidCallback onFavoritePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -372,12 +483,24 @@ class _SearchResultRow extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
+          IconButton(
+            key: Key('favorite_button_${stock.symbol}'),
+            onPressed: isUpdating ? null : onFavoritePressed,
             padding: EdgeInsets.only(left: dimens.space3),
-            child: Icon(
-              Icons.star_border,
-              key: Key('favorite_button_${stock.symbol}'),
-              color: colors.favoriteInactive,
+            constraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 40,
+            ),
+            icon: Icon(
+              isFavorite ? Icons.star : Icons.star_border,
+              key: Key(
+                isFavorite
+                    ? 'favorite_active_${stock.symbol}'
+                    : 'favorite_inactive_${stock.symbol}',
+              ),
+              color: isFavorite
+                  ? colors.favoriteActive
+                  : colors.favoriteInactive,
               size: 28,
             ),
           ),
