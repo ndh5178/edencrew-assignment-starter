@@ -138,7 +138,11 @@ class NaverStockService implements StockSearchService, WatchlistService {
       );
     }
 
-    final Object? decodedResponse = jsonDecode(utf8.decode(response.bodyBytes));
+    // 실시간 시세 API는 `EUC-KR` 응답을 사용합니다.
+    // 현재 사용하는 시세 필드는 영문 키와 숫자이므로 JSON 구조가 보존되는
+    // latin1로 읽고, EUC-KR인 종목명 필드는 검색 API의 값을 사용합니다.
+    final String responseText = latin1.decode(response.bodyBytes);
+    final Object? decodedResponse = jsonDecode(responseText);
     final List<dynamic> rawQuotes = _readRealtimeQuoteList(decodedResponse);
     final Map<String, StockQuote> quotes = <String, StockQuote>{};
 

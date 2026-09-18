@@ -10,11 +10,13 @@ class SearchScreen extends StatefulWidget {
   const SearchScreen({
     required this.searchService,
     required this.favoriteController,
+    required this.onStockSelected,
     super.key,
   });
 
   final StockSearchService searchService;
   final FavoriteController favoriteController;
+  final ValueChanged<Stock> onStockSelected;
 
   @override
   State<SearchScreen> createState() {
@@ -155,6 +157,7 @@ class _SearchScreenState extends State<SearchScreen> {
           query: _searchController.query,
           favoriteController: widget.favoriteController,
           onFavoritePressed: _toggleFavorite,
+          onStockSelected: widget.onStockSelected,
         );
       case SearchStatus.empty:
         return _SearchEmptyView(query: _searchController.query);
@@ -211,9 +214,7 @@ class _SearchScreenState extends State<SearchScreen> {
           children: <Widget>[
             Icon(
               wasAdded ? Icons.star : Icons.star_border,
-              color: wasAdded
-                  ? colors.favoriteActive
-                  : colors.favoriteInactive,
+              color: wasAdded ? colors.favoriteActive : colors.favoriteInactive,
               size: 24,
             ),
             SizedBox(width: dimens.space3),
@@ -311,11 +312,7 @@ class _SearchFailureView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            Icons.error_outline,
-            color: colors.textTertiary,
-            size: 40,
-          ),
+          Icon(Icons.error_outline, color: colors.textTertiary, size: 40),
           SizedBox(height: dimens.space3),
           Text(
             '검색 결과를 불러오지 못했습니다',
@@ -363,11 +360,7 @@ class _CenteredSearchMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            icon,
-            color: colors.textTertiary,
-            size: 40,
-          ),
+          Icon(icon, color: colors.textTertiary, size: 40),
           SizedBox(height: dimens.space3),
           Text(
             title,
@@ -401,12 +394,14 @@ class _SearchResultList extends StatelessWidget {
     required this.query,
     required this.favoriteController,
     required this.onFavoritePressed,
+    required this.onStockSelected,
   });
 
   final List<Stock> stocks;
   final String query;
   final FavoriteController favoriteController;
   final ValueChanged<Stock> onFavoritePressed;
+  final ValueChanged<Stock> onStockSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -431,6 +426,9 @@ class _SearchResultList extends StatelessWidget {
           onFavoritePressed: () {
             onFavoritePressed(stock);
           },
+          onStockSelected: () {
+            onStockSelected(stock);
+          },
         );
       },
     );
@@ -444,6 +442,7 @@ class _SearchResultRow extends StatelessWidget {
     required this.isFavorite,
     required this.isUpdating,
     required this.onFavoritePressed,
+    required this.onStockSelected,
   });
 
   final Stock stock;
@@ -451,70 +450,68 @@ class _SearchResultRow extends StatelessWidget {
   final bool isFavorite;
   final bool isUpdating;
   final VoidCallback onFavoritePressed;
+  final VoidCallback onStockSelected;
 
   @override
   Widget build(BuildContext context) {
     final AppColors colors = context.colors;
     final AppDimens dimens = context.dimens;
 
-    return Container(
+    return InkWell(
       key: Key('search_result_${stock.symbol}'),
-      constraints: BoxConstraints(minHeight: dimens.rowMinHeight),
-      padding: EdgeInsets.symmetric(
-        horizontal: dimens.space4,
-        vertical: dimens.space3,
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _HighlightedStockName(name: stock.name, query: query),
-                SizedBox(height: dimens.space1),
-                Text(
-                  '${stock.symbol} · ${stock.market}',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: AppTypography.regular,
+      onTap: onStockSelected,
+      child: Container(
+        constraints: BoxConstraints(minHeight: dimens.rowMinHeight),
+        padding: EdgeInsets.symmetric(
+          horizontal: dimens.space4,
+          vertical: dimens.space3,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _HighlightedStockName(name: stock.name, query: query),
+                  SizedBox(height: dimens.space1),
+                  Text(
+                    '${stock.symbol} · ${stock.market}',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: AppTypography.regular,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            key: Key('favorite_button_${stock.symbol}'),
-            onPressed: isUpdating ? null : onFavoritePressed,
-            padding: EdgeInsets.only(left: dimens.space3),
-            constraints: const BoxConstraints(
-              minWidth: 40,
-              minHeight: 40,
-            ),
-            icon: Icon(
-              isFavorite ? Icons.star : Icons.star_border,
-              key: Key(
-                isFavorite
-                    ? 'favorite_active_${stock.symbol}'
-                    : 'favorite_inactive_${stock.symbol}',
+                ],
               ),
-              color: isFavorite
-                  ? colors.favoriteActive
-                  : colors.favoriteInactive,
-              size: 28,
             ),
-          ),
-        ],
+            IconButton(
+              key: Key('favorite_button_${stock.symbol}'),
+              onPressed: isUpdating ? null : onFavoritePressed,
+              padding: EdgeInsets.only(left: dimens.space3),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              icon: Icon(
+                isFavorite ? Icons.star : Icons.star_border,
+                key: Key(
+                  isFavorite
+                      ? 'favorite_active_${stock.symbol}'
+                      : 'favorite_inactive_${stock.symbol}',
+                ),
+                color: isFavorite
+                    ? colors.favoriteActive
+                    : colors.favoriteInactive,
+                size: 28,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _HighlightedStockName extends StatelessWidget {
-  const _HighlightedStockName({
-    required this.name,
-    required this.query,
-  });
+  const _HighlightedStockName({required this.name, required this.query});
 
   final String name;
   final String query;

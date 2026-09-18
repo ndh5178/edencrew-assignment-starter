@@ -1,0 +1,73 @@
+import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
+import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
+import 'package:edencrew_assignment_starter/features/stock_detail/stock_detail_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  const Stock samsungElectronics = Stock(
+    symbol: '005930',
+    name: '삼성전자',
+    market: '코스피',
+  );
+
+  test('시세를 받아 상세 정보 상태를 success로 변경한다', () async {
+    final StockDetailController controller = StockDetailController(
+      stock: samsungElectronics,
+      watchlistService: _FakeWatchlistService(hasQuote: true),
+    );
+
+    await controller.initialize();
+
+    expect(controller.status, StockDetailStatus.success);
+    expect(controller.detail!.stock, samsungElectronics);
+    expect(controller.detail!.quote.currentPrice, 179700);
+
+    controller.dispose();
+  });
+
+  test('시세가 없으면 failure 상태로 변경한다', () async {
+    final StockDetailController controller = StockDetailController(
+      stock: samsungElectronics,
+      watchlistService: _FakeWatchlistService(hasQuote: false),
+    );
+
+    await controller.initialize();
+
+    expect(controller.status, StockDetailStatus.failure);
+    expect(controller.detail, isNull);
+
+    controller.dispose();
+  });
+}
+
+class _FakeWatchlistService implements WatchlistService {
+  _FakeWatchlistService({required this.hasQuote});
+
+  final bool hasQuote;
+
+  @override
+  Future<Stock> fetchStockMetadata(String symbol) async {
+    return const Stock(symbol: '005930', name: '삼성전자', market: '코스피');
+  }
+
+  @override
+  Future<Map<String, StockQuote>> fetchQuotes(Iterable<String> symbols) async {
+    if (!hasQuote) {
+      return <String, StockQuote>{};
+    }
+
+    return <String, StockQuote>{
+      '005930': const StockQuote(
+        symbol: '005930',
+        currentPrice: 179700,
+        previousClose: 180100,
+        openPrice: 172100,
+        highPrice: 181700,
+        lowPrice: 172000,
+        accumulatedTradingVolume: 29113466,
+        countOfListedStock: 5919637922,
+      ),
+    };
+  }
+}

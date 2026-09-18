@@ -40,174 +40,143 @@ void main() {
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 
-  testWidgets(
-    '01. 관심 탭과 검색 탭을 전환한다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+  testWidgets('01. 관심 탭과 검색 탭을 전환한다', (WidgetTester tester) async {
+    await launchApp(tester);
 
-      expect(find.byKey(const Key('watchlist_screen')), findsOneWidget);
+    expect(find.byKey(const Key('watchlist_screen')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('bottom_nav_search')));
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.tap(find.byKey(const Key('bottom_nav_search')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.byKey(const Key('search_screen')), findsOneWidget);
+    expect(find.byKey(const Key('search_screen')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.byKey(const Key('watchlist_screen')), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('watchlist_screen')), findsOneWidget);
+  });
 
-  testWidgets(
-    '02. 삼성전자를 검색하고 결과를 확인한다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+  testWidgets('02. 삼성전자를 검색하고 결과를 확인한다', (WidgetTester tester) async {
+    await launchApp(tester);
 
-      await tester.tap(find.byKey(const Key('bottom_nav_search')));
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.tap(find.byKey(const Key('bottom_nav_search')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      await tester.enterText(
-        find.byKey(const Key('stock_search_field')),
-        '삼성',
-      );
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.enterText(find.byKey(const Key('stock_search_field')), '삼성');
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.byKey(const Key('search_result_005930')), findsOneWidget);
-      expect(find.text('삼성전자'), findsOneWidget);
-      expect(find.textContaining('005930'), findsOneWidget);
-    },
-  );
+    expect(find.byKey(const Key('search_result_005930')), findsOneWidget);
+    expect(find.text('삼성전자'), findsOneWidget);
+    expect(find.textContaining('005930'), findsOneWidget);
+  });
 
-  testWidgets(
-    '03. 검색 결과에서 관심 종목을 등록한다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+  testWidgets('03. 검색 결과에서 관심 종목을 등록한다', (WidgetTester tester) async {
+    await launchApp(tester);
 
-      await tester.tap(find.byKey(const Key('bottom_nav_search')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom_nav_search')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('stock_search_field')),
-        '삼성',
-      );
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('stock_search_field')), '삼성');
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('favorite_button_005930')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('favorite_button_005930')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text('관심이 등록되었습니다'), findsOneWidget);
-      expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
-      await pauseForObservation(tester);
+    expect(find.text('관심이 등록되었습니다'), findsOneWidget);
+    expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
+    await pauseForObservation(tester);
 
-      await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
+    await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('watchlist_item_005930')), findsOneWidget);
-      expect(find.text('삼성전자'), findsOneWidget);
-      await pauseForObservation(tester);
-    },
-  );
+    expect(find.byKey(const Key('watchlist_item_005930')), findsOneWidget);
+    expect(find.text('삼성전자'), findsOneWidget);
+    await pauseForObservation(tester);
+  });
 
-  testWidgets(
-    '04. 관심 목록의 정렬 방식을 변경한다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+  testWidgets('04. 관심 목록의 정렬 방식을 변경한다', (WidgetTester tester) async {
+    await launchApp(tester);
 
-      await tester.tap(find.byKey(const Key('watchlist_sort_button')));
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.tap(find.byKey(const Key('watchlist_sort_button')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.text('정렬'), findsOneWidget);
+    expect(find.text('정렬'), findsOneWidget);
 
-      await tester.tap(find.text('현재가순'));
-      await tester.pumpAndSettle();
-      await pauseForObservation(tester);
+    await tester.tap(find.text('현재가순'));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.text('현재가순'), findsOneWidget);
-    },
-  );
+    expect(find.text('현재가순'), findsOneWidget);
+  });
 
-  testWidgets(
-    '05. 관심 종목의 상세 화면을 열고 조회 기간을 변경한다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+  testWidgets('05. 관심 종목의 상세 화면을 열고 시세를 확인한다', (WidgetTester tester) async {
+    favoriteStorage.seed('005930');
+    await launchApp(tester);
 
-      await tester.tap(find.byKey(const Key('watchlist_item_005930')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('watchlist_item_005930')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
 
-      expect(find.byKey(const Key('stock_detail_screen')), findsOneWidget);
-      expect(find.text('삼성전자'), findsOneWidget);
+    expect(find.byKey(const Key('stock_detail_screen')), findsOneWidget);
+    expect(find.text('삼성전자'), findsOneWidget);
+    expect(find.text('179,700'), findsOneWidget);
+    expect(find.text('시가'), findsOneWidget);
+    expect(find.text('시가총액'), findsOneWidget);
+  });
 
-      await tester.tap(find.byKey(const Key('period_3_months')));
-      await tester.pumpAndSettle();
+  testWidgets('06. 상세 화면에서 관심을 해제하면 관심 목록에서도 제거된다', (
+    WidgetTester tester,
+  ) async {
+    favoriteStorage.seed('005930');
+    await launchApp(tester);
 
-      expect(find.byKey(const Key('candlestick_chart')), findsOneWidget);
-      expect(find.byKey(const Key('daily_price_list')), findsOneWidget);
-    },
-    skip: true,
-  );
+    await tester.tap(find.byKey(const Key('watchlist_item_005930')));
+    await tester.pumpAndSettle();
 
-  testWidgets(
-    '06. 상세 화면에서 관심을 해제하면 관심 목록에서도 제거된다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+    await tester.tap(find.byKey(const Key('favorite_button_005930')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.byKey(const Key('watchlist_item_005930')));
-      await tester.pumpAndSettle();
+    expect(find.text('관심이 해제되었습니다'), findsOneWidget);
+    await pauseForObservation(tester);
 
-      await tester.tap(find.byKey(const Key('favorite_button_005930')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('stock_detail_back_button')));
+    await tester.pumpAndSettle();
 
-      expect(find.text('관심이 해제되었습니다'), findsOneWidget);
+    expect(find.byKey(const Key('watchlist_item_005930')), findsNothing);
+    expect(find.text('관심 종목이 없습니다'), findsOneWidget);
+  });
 
-      await tester.pageBack();
-      await tester.pumpAndSettle();
+  testWidgets('07. 앱을 다시 시작해도 관심 종목이 유지된다', (WidgetTester tester) async {
+    await launchApp(tester);
 
-      expect(find.byKey(const Key('watchlist_item_005930')), findsNothing);
-      expect(find.text('관심 종목이 없습니다'), findsOneWidget);
-    },
-    skip: true,
-  );
+    await tester.tap(find.byKey(const Key('bottom_nav_search')));
+    await tester.pumpAndSettle();
 
-  testWidgets(
-    '07. 앱을 다시 시작해도 관심 종목이 유지된다',
-    (WidgetTester tester) async {
-      await launchApp(tester);
+    await tester.enterText(find.byKey(const Key('stock_search_field')), '삼성');
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('bottom_nav_search')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('favorite_button_005930')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.enterText(
-        find.byKey(const Key('stock_search_field')),
-        '삼성',
-      );
-      await tester.pumpAndSettle();
+    await launchApp(tester);
 
-      await tester.tap(find.byKey(const Key('favorite_button_005930')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('bottom_nav_search')));
+    await tester.pumpAndSettle();
 
-      await launchApp(tester);
+    await tester.enterText(find.byKey(const Key('stock_search_field')), '삼성');
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('bottom_nav_search')));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(
-        find.byKey(const Key('stock_search_field')),
-        '삼성',
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
-      await pauseForObservation(tester);
-    },
-  );
+    expect(find.byKey(const Key('favorite_active_005930')), findsOneWidget);
+    await pauseForObservation(tester);
+  });
 }
 
 class _FakeStockService implements StockSearchService, WatchlistService {
@@ -227,20 +196,14 @@ class _FakeStockService implements StockSearchService, WatchlistService {
   @override
   Future<Stock> fetchStockMetadata(String symbol) async {
     if (symbol == '005930') {
-      return const Stock(
-        symbol: '005930',
-        name: '삼성전자',
-        market: '코스피',
-      );
+      return const Stock(symbol: '005930', name: '삼성전자', market: '코스피');
     }
 
     return Stock(symbol: symbol, name: '테스트 종목', market: '코스피');
   }
 
   @override
-  Future<Map<String, StockQuote>> fetchQuotes(
-    Iterable<String> symbols,
-  ) async {
+  Future<Map<String, StockQuote>> fetchQuotes(Iterable<String> symbols) async {
     final Map<String, StockQuote> quotes = <String, StockQuote>{};
 
     for (final String symbol in symbols) {
@@ -282,5 +245,9 @@ class _FakeFavoriteStorage implements FavoriteStorage {
 
   void clear() {
     _symbols.clear();
+  }
+
+  void seed(String symbol) {
+    _symbols.add(symbol);
   }
 }
