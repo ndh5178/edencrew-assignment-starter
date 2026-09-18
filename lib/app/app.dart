@@ -14,11 +14,13 @@ import 'app_controller.dart';
 class EdencrewAssignmentApp extends StatefulWidget {
   const EdencrewAssignmentApp({
     this.stockSearchService,
+    this.watchlistService,
     this.favoriteStorage,
     super.key,
   });
 
   final StockSearchService? stockSearchService;
+  final WatchlistService? watchlistService;
   final FavoriteStorage? favoriteStorage;
 
   @override
@@ -30,15 +32,21 @@ class EdencrewAssignmentApp extends StatefulWidget {
 class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
   late final AppController _appController;
   late final StockSearchService _stockSearchService;
-  late final bool _ownsStockSearchService;
+  late final WatchlistService _watchlistService;
+  NaverStockService? _ownedNaverStockService;
   late final FavoriteController _favoriteController;
 
   @override
   void initState() {
     super.initState();
     _appController = AppController();
-    _ownsStockSearchService = widget.stockSearchService == null;
-    _stockSearchService = widget.stockSearchService ?? NaverStockService();
+    if (widget.stockSearchService == null || widget.watchlistService == null) {
+      _ownedNaverStockService = NaverStockService();
+    }
+
+    _stockSearchService =
+        widget.stockSearchService ?? _ownedNaverStockService!;
+    _watchlistService = widget.watchlistService ?? _ownedNaverStockService!;
     _favoriteController = FavoriteController(
       storage: widget.favoriteStorage ?? SharedPreferencesFavoriteStorage(),
     );
@@ -49,9 +57,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
   void dispose() {
     _appController.dispose();
     _favoriteController.dispose();
-    if (_ownsStockSearchService) {
-      _stockSearchService.close();
-    }
+    _ownedNaverStockService?.close();
     super.dispose();
   }
 
@@ -64,6 +70,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
       home: AppShell(
         controller: _appController,
         stockSearchService: _stockSearchService,
+        watchlistService: _watchlistService,
         favoriteController: _favoriteController,
       ),
     );
@@ -74,12 +81,14 @@ class AppShell extends StatelessWidget {
   const AppShell({
     required this.controller,
     required this.stockSearchService,
+    required this.watchlistService,
     required this.favoriteController,
     super.key,
   });
 
   final AppController controller;
   final StockSearchService stockSearchService;
+  final WatchlistService watchlistService;
   final FavoriteController favoriteController;
 
   @override
@@ -91,7 +100,10 @@ class AppShell extends StatelessWidget {
           body: IndexedStack(
             index: controller.selectedTabIndex,
             children: <Widget>[
-              const WatchlistScreen(),
+              WatchlistScreen(
+                watchlistService: watchlistService,
+                favoriteController: favoriteController,
+              ),
               SearchScreen(
                 searchService: stockSearchService,
                 favoriteController: favoriteController,
