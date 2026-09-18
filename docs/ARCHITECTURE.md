@@ -22,6 +22,8 @@ lib/
 │   ├── naver_stock_service.dart      Naver API 요청과 응답 변환
 │   └── favorite_storage.dart         관심 종목 코드 로컬 저장
 ├── features/
+│   ├── favorites/
+│   │   └── favorite_controller.dart  화면들이 공유하는 관심 종목 상태
 │   ├── watchlist/
 │   │   ├── watchlist_screen.dart
 │   │   ├── watchlist_controller.dart
@@ -58,7 +60,7 @@ lib/
 
 ### 기기 저장소
 
-관심 종목의 종목 코드는 `shared_preferences`에 문자열 목록으로 저장한다.
+관심 종목의 종목 코드는 `shared_preferences`의 `SharedPreferencesAsync` API를 사용해 문자열 목록으로 저장한다.
 
 ```text
 ["005930", "000660", "035720"]
