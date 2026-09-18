@@ -26,16 +26,14 @@ lib/
 │   │   └── favorite_controller.dart  화면들이 공유하는 관심 종목 상태
 │   ├── watchlist/
 │   │   ├── watchlist_screen.dart
-│   │   ├── watchlist_controller.dart
-│   │   └── widgets/
+│   │   └── watchlist_controller.dart
 │   ├── search/
 │   │   ├── search_screen.dart
-│   │   ├── search_controller.dart
-│   │   └── widgets/
+│   │   └── search_controller.dart
 │   └── stock_detail/
 │       ├── stock_detail_screen.dart
 │       ├── stock_detail_controller.dart
-│       └── widgets/
+│       └── price_chart_section.dart
 ├── shared/
 │   └── widgets/                      여러 기능에서 함께 쓰는 위젯
 └── theme/                            회사에서 제공한 디자인 토큰과 테마
@@ -100,12 +98,12 @@ fetchQuotes(symbols) -> Map<String, StockQuote>
 ### 종목 상세 조회
 
 ```text
-fetchStockDetail(symbol) -> StockDetail
+fetchQuotes([symbol]) + 선택한 Stock -> StockDetail
 ```
 
-- 입력: 종목 코드 한 개
-- 출력: 종목명, 시장, 현재가, 전일 대비, 등락률, 시가, 고가, 저가, 거래량, 상장 주식 수
-- 시가총액은 API에서 제공되는 값을 우선 사용하고, 필요한 경우 현재가와 상장 주식 수로 계산한다.
+- 검색 또는 관심 목록에서 선택한 `Stock`의 종목 코드로 시세를 조회한다.
+- 종목명과 시장은 선택한 `Stock`, 가격 정보는 `StockQuote`에서 가져와 `StockDetail`로 묶는다.
+- 출력: 종목명, 시장, 현재가, 전일 대비, 등락률, 시가, 고가, 저가, 거래량, 시가총액
 
 ### 일봉 조회
 
@@ -133,7 +131,8 @@ saveFavoriteSymbols(symbols) -> void
 - 저장 대상은 관심 종목 코드 목록뿐이다.
 - 중복된 종목 코드는 저장하지 않는다.
 - 관심 종목을 추가하거나 삭제할 때마다 전체 목록을 다시 저장한다.
-- 저장된 값이 없거나 읽기에 실패하면 빈 목록으로 시작한다.
+- 저장된 값이 없으면 빈 목록으로 시작한다.
+- 읽기 또는 쓰기에 실패하면 관심 상태를 임의로 확정하지 않고 오류 상태와 재시도 동작을 제공한다.
 
 ## 6. 캐시 기준
 
