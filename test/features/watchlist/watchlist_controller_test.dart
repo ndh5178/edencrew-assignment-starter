@@ -77,6 +77,34 @@ void main() {
     watchlistController.dispose();
     favoriteController.dispose();
   });
+
+  test('시세 새로고침이 실패해도 기존 가격을 유지한다', () async {
+    final FavoriteController favoriteController = FavoriteController(
+      storage: _MemoryFavoriteStorage(
+        initialSymbols: <String>{'005930'},
+      ),
+    );
+    await favoriteController.initialize();
+    final _FakeWatchlistService service = _FakeWatchlistService();
+    final WatchlistController watchlistController = WatchlistController(
+      favoriteController: favoriteController,
+      watchlistService: service,
+    );
+    watchlistController.initialize();
+    await _waitUntilLoaded(watchlistController);
+
+    service.shouldFailQuotes = true;
+    await watchlistController.refreshQuotes();
+
+    expect(watchlistController.hasQuoteLoadFailure, isTrue);
+    expect(
+      watchlistController.sortedItems.first.quote!.currentPrice,
+      179700,
+    );
+
+    watchlistController.dispose();
+    favoriteController.dispose();
+  });
 }
 
 Future<void> _waitUntilLoaded(WatchlistController controller) async {
@@ -120,6 +148,8 @@ class _MemoryFavoriteStorage implements FavoriteStorage {
 }
 
 class _FakeWatchlistService implements WatchlistService {
+  bool shouldFailQuotes = false;
+
   @override
   Future<Stock> fetchStockMetadata(String symbol) async {
     if (symbol == '005930') {
@@ -141,6 +171,10 @@ class _FakeWatchlistService implements WatchlistService {
   Future<Map<String, StockQuote>> fetchQuotes(
     Iterable<String> symbols,
   ) async {
+    if (shouldFailQuotes) {
+      throw const StockServiceException('시세 요청 실패');
+    }
+
     return <String, StockQuote>{
       '005930': const StockQuote(
         symbol: '005930',

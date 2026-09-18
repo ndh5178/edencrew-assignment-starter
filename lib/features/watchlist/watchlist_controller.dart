@@ -53,6 +53,7 @@ class WatchlistController extends ChangeNotifier {
   WatchlistStatus _status = WatchlistStatus.loading;
   WatchlistSort _sort = WatchlistSort.name;
   bool _isRefreshingQuotes = false;
+  bool _hasQuoteLoadFailure = false;
   bool _isDisposed = false;
   int _requestVersion = 0;
 
@@ -66,6 +67,10 @@ class WatchlistController extends ChangeNotifier {
 
   bool get isRefreshingQuotes {
     return _isRefreshingQuotes;
+  }
+
+  bool get hasQuoteLoadFailure {
+    return _hasQuoteLoadFailure;
   }
 
   List<WatchlistItem> get sortedItems {
@@ -96,9 +101,7 @@ class WatchlistController extends ChangeNotifier {
 
     final int requestedVersion = _requestVersion;
     _isRefreshingQuotes = true;
-    _items = _items.map((WatchlistItem item) {
-      return item.withQuote(null);
-    }).toList();
+    _hasQuoteLoadFailure = false;
     notifyListeners();
 
     await _loadQuotes(requestedVersion);
@@ -121,6 +124,14 @@ class WatchlistController extends ChangeNotifier {
       return;
     }
 
+    if (_favoriteController.status == FavoriteStatus.failure) {
+      _items = <WatchlistItem>[];
+      _status = WatchlistStatus.failure;
+      _isRefreshingQuotes = false;
+      notifyListeners();
+      return;
+    }
+
     final Set<String> currentSymbols = _favoriteController.favoriteSymbols;
 
     if (currentSymbols.isEmpty) {
@@ -129,6 +140,7 @@ class WatchlistController extends ChangeNotifier {
       _items = <WatchlistItem>[];
       _status = WatchlistStatus.empty;
       _isRefreshingQuotes = false;
+      _hasQuoteLoadFailure = false;
       notifyListeners();
       return;
     }
@@ -150,6 +162,7 @@ class WatchlistController extends ChangeNotifier {
     int requestedVersion,
   ) async {
     _status = WatchlistStatus.loading;
+    _hasQuoteLoadFailure = false;
     notifyListeners();
 
     final List<Future<Stock?>> metadataRequests = <Future<Stock?>>[];
@@ -191,7 +204,8 @@ class WatchlistController extends ChangeNotifier {
   Future<Stock?> _loadMetadata(String symbol) async {
     try {
       return await _watchlistService.fetchStockMetadata(symbol);
-    } on Object {
+    } on Object catch (error) {
+      debugPrint('종목 메타데이터 조회 실패 ($symbol): $error');
       return null;
     }
   }
@@ -207,12 +221,18 @@ class WatchlistController extends ChangeNotifier {
       }
 
       _items = _items.map((WatchlistItem item) {
-        return item.withQuote(quotes[item.stock.symbol]);
+        final StockQuote? loadedQuote = quotes[item.stock.symbol];
+        return item.withQuote(loadedQuote ?? item.quote);
       }).toList();
-    } on Object {
+      _hasQuoteLoadFailure = quotes.length < _items.length;
+    } on Object catch (error, stackTrace) {
       if (_shouldIgnoreResponse(requestedVersion)) {
         return;
       }
+
+      debugPrint('관심 종목 시세 조회 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _hasQuoteLoadFailure = true;
     }
 
     _isRefreshingQuotes = false;

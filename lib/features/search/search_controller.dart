@@ -108,11 +108,13 @@ class StockSearchController extends ChangeNotifier {
       } else {
         _status = SearchStatus.success;
       }
-    } on Object {
+    } on Object catch (error, stackTrace) {
       if (_shouldIgnoreResponse(requestedVersion)) {
         return;
       }
 
+      debugPrint('종목 검색 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _results = <Stock>[];
       _status = SearchStatus.failure;
       _errorMessage = '검색 결과를 불러오지 못했습니다.';

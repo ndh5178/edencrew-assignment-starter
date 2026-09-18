@@ -529,7 +529,12 @@ class _HighlightedStockName extends StatelessWidget {
     );
 
     if (matchStart < 0 || query.isEmpty) {
-      return Text(name, style: normalStyle);
+      return Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: normalStyle,
+      );
     }
 
     final int matchEnd = matchStart + query.length;
