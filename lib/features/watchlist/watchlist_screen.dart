@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/stock.dart';
 import '../../data/models/stock_quote.dart';
 import '../../data/naver_stock_service.dart';
 import '../../shared/formatters/number_formatter.dart';
@@ -11,11 +12,13 @@ class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({
     required this.watchlistService,
     required this.favoriteController,
+    required this.onStockSelected,
     super.key,
   });
 
   final WatchlistService watchlistService;
   final FavoriteController favoriteController;
+  final ValueChanged<Stock> onStockSelected;
 
   @override
   State<WatchlistScreen> createState() {
@@ -73,7 +76,10 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
       case WatchlistStatus.empty:
         return const _WatchlistEmptyView();
       case WatchlistStatus.success:
-        return _WatchlistItems(items: _watchlistController.sortedItems);
+        return _WatchlistItems(
+          items: _watchlistController.sortedItems,
+          onStockSelected: widget.onStockSelected,
+        );
       case WatchlistStatus.failure:
         return _WatchlistFailureView(onRetry: _watchlistController.retry);
     }
@@ -145,10 +151,7 @@ class _WatchlistHeader extends StatelessWidget {
             ),
             label: Text(
               selectedSort.label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: AppTypography.medium,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: AppTypography.medium),
             ),
             icon: const Icon(Icons.arrow_downward, size: 18),
             iconAlignment: IconAlignment.end,
@@ -198,11 +201,7 @@ class _WatchlistEmptyView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            Icons.star_border,
-            color: colors.textTertiary,
-            size: 36,
-          ),
+          Icon(Icons.star_border, color: colors.textTertiary, size: 36),
           SizedBox(height: dimens.space3),
           Text(
             '관심 종목이 없습니다',
@@ -254,10 +253,7 @@ class _WatchlistFailureView extends StatelessWidget {
           SizedBox(height: dimens.space3),
           TextButton(
             onPressed: onRetry,
-            child: Text(
-              '다시 시도',
-              style: TextStyle(color: colors.accentDefault),
-            ),
+            child: Text('다시 시도', style: TextStyle(color: colors.accentDefault)),
           ),
         ],
       ),
@@ -266,9 +262,10 @@ class _WatchlistFailureView extends StatelessWidget {
 }
 
 class _WatchlistItems extends StatelessWidget {
-  const _WatchlistItems({required this.items});
+  const _WatchlistItems({required this.items, required this.onStockSelected});
 
   final List<WatchlistItem> items;
+  final ValueChanged<Stock> onStockSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -282,60 +279,71 @@ class _WatchlistItems extends StatelessWidget {
         );
       },
       itemBuilder: (BuildContext context, int index) {
-        return _WatchlistRow(item: items[index]);
+        final WatchlistItem item = items[index];
+
+        return _WatchlistRow(
+          item: item,
+          onStockSelected: () {
+            onStockSelected(item.stock);
+          },
+        );
       },
     );
   }
 }
 
 class _WatchlistRow extends StatelessWidget {
-  const _WatchlistRow({required this.item});
+  const _WatchlistRow({required this.item, required this.onStockSelected});
 
   final WatchlistItem item;
+  final VoidCallback onStockSelected;
 
   @override
   Widget build(BuildContext context) {
     final AppColors colors = context.colors;
     final AppDimens dimens = context.dimens;
 
-    return Container(
+    return InkWell(
       key: Key('watchlist_item_${item.stock.symbol}'),
-      constraints: BoxConstraints(minHeight: dimens.rowMinHeight),
-      padding: EdgeInsets.symmetric(
-        horizontal: dimens.space4,
-        vertical: dimens.space3,
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  item.stock.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: AppTypography.bold,
+      onTap: onStockSelected,
+      child: Container(
+        constraints: BoxConstraints(minHeight: dimens.rowMinHeight),
+        padding: EdgeInsets.symmetric(
+          horizontal: dimens.space4,
+          vertical: dimens.space3,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    item.stock.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: AppTypography.bold,
+                    ),
                   ),
-                ),
-                SizedBox(height: dimens.space1),
-                Text(
-                  '${item.stock.symbol} · ${item.stock.market}',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: AppTypography.regular,
+                  SizedBox(height: dimens.space1),
+                  Text(
+                    '${item.stock.symbol} · ${item.stock.market}',
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: AppTypography.regular,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: dimens.space3),
-          _WatchlistPrice(quote: item.quote),
-        ],
+            SizedBox(width: dimens.space3),
+            _WatchlistPrice(quote: item.quote),
+          ],
+        ),
       ),
     );
   }
@@ -400,10 +408,7 @@ class _WatchlistPrice extends StatelessWidget {
 }
 
 class _SkeletonBar extends StatelessWidget {
-  const _SkeletonBar({
-    required this.width,
-    required this.height,
-  });
+  const _SkeletonBar({required this.width, required this.height});
 
   final double width;
   final double height;
@@ -511,20 +516,14 @@ class _SortOption extends StatelessWidget {
               child: Text(
                 sort.label,
                 style: TextStyle(
-                  color: isSelected
-                      ? colors.textPrimary
-                      : colors.textSecondary,
+                  color: isSelected ? colors.textPrimary : colors.textSecondary,
                   fontSize: 16,
                   fontWeight: AppTypography.medium,
                 ),
               ),
             ),
             if (isSelected)
-              Icon(
-                Icons.check,
-                color: colors.textPrimary,
-                size: 22,
-              ),
+              Icon(Icons.check, color: colors.textPrimary, size: 22),
           ],
         ),
       ),
