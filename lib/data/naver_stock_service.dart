@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:html/dom.dart';
@@ -39,6 +40,7 @@ class NaverStockService
 
   final http.Client _client;
   final bool _ownsClient;
+  static const Duration _requestTimeout = Duration(seconds: 12);
 
   @override
   Future<List<Stock>> searchStocks(String query) async {
@@ -53,7 +55,7 @@ class NaverStockService
       'target': 'stock,ipo,index,marketindicator',
     });
 
-    final http.Response response = await _client.get(uri);
+    final http.Response response = await _get(uri);
 
     if (response.statusCode != 200) {
       throw StockServiceException(
@@ -104,7 +106,7 @@ class NaverStockService
       'stock.naver.com',
       '/api/securityFe/api/fchart/domestic/stock/$symbol',
     );
-    final http.Response response = await _client.get(uri);
+    final http.Response response = await _get(uri);
 
     if (response.statusCode != 200) {
       throw StockServiceException(
@@ -134,7 +136,7 @@ class NaverStockService
       '/api/realtime',
       <String, String>{'query': 'SERVICE_ITEM:${symbolList.join(',')}'},
     );
-    final http.Response response = await _client.get(uri);
+    final http.Response response = await _get(uri);
 
     if (response.statusCode != 200) {
       throw StockServiceException(
@@ -176,7 +178,23 @@ class NaverStockService
 
     for (int page = 1; page <= period.pageCount; page += 1) {
       if (useJsonFallback) {
-        prices.addAll(await _fetchDailyPriceJsonPage(symbol, page));
+        final List<DailyPrice> pagePrices;
+
+        try {
+          pagePrices = await _fetchDailyPriceJsonPage(symbol, page);
+        } on Object {
+          if (prices.isEmpty) {
+            rethrow;
+          }
+
+          break;
+        }
+
+        if (pagePrices.isEmpty) {
+          break;
+        }
+
+        prices.addAll(pagePrices);
         continue;
       }
 
@@ -186,13 +204,45 @@ class NaverStockService
         htmlPage = await _fetchDailyPriceHtmlPage(symbol, page);
       } on Object {
         useJsonFallback = true;
-        prices.addAll(await _fetchDailyPriceJsonPage(symbol, page));
+        final List<DailyPrice> pagePrices;
+
+        try {
+          pagePrices = await _fetchDailyPriceJsonPage(symbol, page);
+        } on Object {
+          if (prices.isEmpty) {
+            rethrow;
+          }
+
+          break;
+        }
+
+        if (pagePrices.isEmpty) {
+          break;
+        }
+
+        prices.addAll(pagePrices);
         continue;
       }
 
       if (htmlPage.prices.isEmpty) {
         useJsonFallback = true;
-        prices.addAll(await _fetchDailyPriceJsonPage(symbol, page));
+        final List<DailyPrice> pagePrices;
+
+        try {
+          pagePrices = await _fetchDailyPriceJsonPage(symbol, page);
+        } on Object {
+          if (prices.isEmpty) {
+            rethrow;
+          }
+
+          break;
+        }
+
+        if (pagePrices.isEmpty) {
+          break;
+        }
+
+        prices.addAll(pagePrices);
         continue;
       }
 
@@ -219,7 +269,7 @@ class NaverStockService
       '/item/sise_day.naver',
       <String, String>{'code': symbol, 'page': '$page'},
     );
-    final http.Response response = await _client.get(
+    final http.Response response = await _get(
       uri,
       headers: <String, String>{'User-Agent': 'Mozilla/5.0'},
     );
@@ -298,7 +348,7 @@ class NaverStockService
       '/api/stock/$symbol/price',
       <String, String>{'pageSize': '10', 'page': '$page'},
     );
-    final http.Response response = await _client.get(uri);
+    final http.Response response = await _get(uri);
 
     if (response.statusCode != 200) {
       throw StockServiceException(
@@ -332,6 +382,21 @@ class NaverStockService
   int _readHtmlNumber(String value) {
     final String normalizedValue = value.replaceAll(',', '').trim();
     return int.parse(normalizedValue);
+  }
+
+  Future<http.Response> _get(
+    Uri uri, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      return await _client
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      throw const StockServiceException('요청 시간이 초과되었습니다.');
+    } on http.ClientException {
+      throw const StockServiceException('네트워크 연결을 확인해 주세요.');
+    }
   }
 
   List<dynamic> _readRealtimeQuoteList(Object? decodedResponse) {

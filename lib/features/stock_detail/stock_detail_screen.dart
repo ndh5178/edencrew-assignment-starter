@@ -367,38 +367,42 @@ class _CurrentPrice extends StatelessWidget {
       changeIcon = Icons.remove;
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: <Widget>[
-        Text(
-          formatInteger(quote.currentPrice),
-          key: const Key('stock_detail_current_price'),
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: 36,
-            fontWeight: AppTypography.bold,
-            height: 1,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Text(
+            formatInteger(quote.currentPrice),
+            key: const Key('stock_detail_current_price'),
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 36,
+              fontWeight: AppTypography.bold,
+              height: 1,
+            ),
           ),
-        ),
-        SizedBox(width: dimens.space2),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: Row(
-            children: <Widget>[
-              Icon(changeIcon, color: changeColor, size: 28),
-              Text(
-                '${formatInteger(quote.changeAmount.abs())} '
-                '(${formatSignedRate(quote.changeRate)})',
-                style: TextStyle(
-                  color: changeColor,
-                  fontSize: 18,
-                  fontWeight: AppTypography.medium,
+          SizedBox(width: dimens.space2),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: <Widget>[
+                Icon(changeIcon, color: changeColor, size: 28),
+                Text(
+                  '${formatInteger(quote.changeAmount.abs())} '
+                  '(${formatSignedRate(quote.changeRate)})',
+                  style: TextStyle(
+                    color: changeColor,
+                    fontSize: 18,
+                    fontWeight: AppTypography.medium,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -31,6 +31,7 @@ class StockDetailController extends ChangeNotifier {
   DailyPricePeriod _selectedPeriod = DailyPricePeriod.oneMonth;
   List<DailyPrice> _dailyPrices = <DailyPrice>[];
   int _dailyPriceRequestId = 0;
+  bool _isLoadingDetail = false;
   bool _isDisposed = false;
 
   StockDetailStatus get status {
@@ -66,7 +67,8 @@ class StockDetailController extends ChangeNotifier {
 
   Future<void> selectPeriod(DailyPricePeriod period) async {
     if (_selectedPeriod == period &&
-        _dailyPriceStatus == DailyPriceStatus.success) {
+        (_dailyPriceStatus == DailyPriceStatus.success ||
+            _dailyPriceStatus == DailyPriceStatus.loading)) {
       return;
     }
 
@@ -107,11 +109,13 @@ class StockDetailController extends ChangeNotifier {
       _dailyPriceCache[period] = loadedPrices;
       _dailyPrices = loadedPrices;
       _dailyPriceStatus = DailyPriceStatus.success;
-    } on Object {
+    } on Object catch (error, stackTrace) {
       if (_isDisposed || requestId != _dailyPriceRequestId) {
         return;
       }
 
+      debugPrint('일별 시세 조회 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _dailyPrices = <DailyPrice>[];
       _dailyPriceStatus = DailyPriceStatus.failure;
     }
@@ -120,6 +124,11 @@ class StockDetailController extends ChangeNotifier {
   }
 
   Future<void> _loadDetail() async {
+    if (_isLoadingDetail) {
+      return;
+    }
+
+    _isLoadingDetail = true;
     _status = StockDetailStatus.loading;
     _detail = null;
     notifyListeners();
@@ -139,15 +148,18 @@ class StockDetailController extends ChangeNotifier {
 
       _detail = StockDetail(stock: _stock, quote: quote);
       _status = StockDetailStatus.success;
-    } on Object {
+    } on Object catch (error, stackTrace) {
       if (_isDisposed) {
         return;
       }
 
+      debugPrint('종목 상세 시세 조회 실패: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _detail = null;
       _status = StockDetailStatus.failure;
     }
 
+    _isLoadingDetail = false;
     notifyListeners();
   }
 

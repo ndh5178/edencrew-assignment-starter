@@ -76,9 +76,19 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
       case WatchlistStatus.empty:
         return const _WatchlistEmptyView();
       case WatchlistStatus.success:
-        return _WatchlistItems(
-          items: _watchlistController.sortedItems,
-          onStockSelected: widget.onStockSelected,
+        return Column(
+          children: <Widget>[
+            if (_watchlistController.hasQuoteLoadFailure)
+              _WatchlistQuoteWarning(
+                onRetry: _watchlistController.refreshQuotes,
+              ),
+            Expanded(
+              child: _WatchlistItems(
+                items: _watchlistController.sortedItems,
+                onStockSelected: widget.onStockSelected,
+              ),
+            ),
+          ],
         );
       case WatchlistStatus.failure:
         return _WatchlistFailureView(onRetry: _watchlistController.retry);
@@ -254,6 +264,65 @@ class _WatchlistFailureView extends StatelessWidget {
           TextButton(
             onPressed: onRetry,
             child: Text('다시 시도', style: TextStyle(color: colors.accentDefault)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WatchlistQuoteWarning extends StatelessWidget {
+  const _WatchlistQuoteWarning({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppColors colors = context.colors;
+    final AppDimens dimens = context.dimens;
+
+    return Container(
+      key: const Key('watchlist_quote_warning'),
+      margin: EdgeInsets.fromLTRB(
+        dimens.space4,
+        0,
+        dimens.space4,
+        dimens.space2,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: dimens.space3,
+        vertical: dimens.space2,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(dimens.radiusMd),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            Icons.info_outline,
+            color: colors.feedbackWarning,
+            size: 20,
+          ),
+          SizedBox(width: dimens.space2),
+          Expanded(
+            child: Text(
+              '일부 시세를 불러오지 못했습니다',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          TextButton(
+            key: const Key('watchlist_quote_retry_button'),
+            onPressed: onRetry,
+            child: Text(
+              '다시 시도',
+              style: TextStyle(color: colors.accentDefault),
+            ),
           ),
         ],
       ),
