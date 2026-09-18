@@ -1,6 +1,7 @@
 import 'package:edencrew_assignment_starter/app/app.dart';
 import 'package:edencrew_assignment_starter/data/favorite_storage.dart';
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/daily_price.dart';
 import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ void main() {
       EdencrewAssignmentApp(
         stockSearchService: stockService,
         watchlistService: stockService,
+        dailyPriceService: stockService,
         favoriteStorage: favoriteStorage,
       ),
     );
@@ -115,7 +117,9 @@ void main() {
     expect(find.text('현재가순'), findsOneWidget);
   });
 
-  testWidgets('05. 관심 종목의 상세 화면을 열고 시세를 확인한다', (WidgetTester tester) async {
+  testWidgets('05. 상세 화면에서 조회 기간을 변경하고 일별 시세를 확인한다', (
+    WidgetTester tester,
+  ) async {
     favoriteStorage.seed('005930');
     await launchApp(tester);
 
@@ -125,9 +129,20 @@ void main() {
 
     expect(find.byKey(const Key('stock_detail_screen')), findsOneWidget);
     expect(find.text('삼성전자'), findsOneWidget);
-    expect(find.text('179,700'), findsOneWidget);
+    final Finder currentPriceFinder = find.byKey(
+      const Key('stock_detail_current_price'),
+    );
+    expect(currentPriceFinder, findsOneWidget);
+    expect(tester.widget<Text>(currentPriceFinder).data, '179,700');
     expect(find.text('시가'), findsOneWidget);
     expect(find.text('시가총액'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('period_3_months')));
+    await tester.pumpAndSettle();
+    await pauseForObservation(tester);
+
+    expect(find.byKey(const Key('candlestick_chart')), findsOneWidget);
+    expect(find.byKey(const Key('daily_price_list')), findsOneWidget);
   });
 
   testWidgets('06. 상세 화면에서 관심을 해제하면 관심 목록에서도 제거된다', (
@@ -179,7 +194,35 @@ void main() {
   });
 }
 
-class _FakeStockService implements StockSearchService, WatchlistService {
+class _FakeStockService
+    implements StockSearchService, WatchlistService, DailyPriceService {
+  @override
+  Future<List<DailyPrice>> fetchDailyPrices(
+    String symbol,
+    DailyPricePeriod period,
+  ) async {
+    return const <DailyPrice>[
+      DailyPrice(
+        localDate: '20260327',
+        closePrice: 179700,
+        changeAmount: -400,
+        openPrice: 172100,
+        highPrice: 181700,
+        lowPrice: 172000,
+        accumulatedTradingVolume: 29113466,
+      ),
+      DailyPrice(
+        localDate: '20260326',
+        closePrice: 180100,
+        changeAmount: 1200,
+        openPrice: 178900,
+        highPrice: 181000,
+        lowPrice: 178500,
+        accumulatedTradingVolume: 32074131,
+      ),
+    ];
+  }
+
   @override
   Future<List<Stock>> searchStocks(String query) async {
     if (!query.contains('삼성')) {

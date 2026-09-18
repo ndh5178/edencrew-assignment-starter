@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/daily_price.dart';
 import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,10 +62,7 @@ void main() {
     });
     final NaverStockService service = NaverStockService(client: client);
 
-    expect(
-      service.searchStocks('삼성'),
-      throwsA(isA<StockServiceException>()),
-    );
+    expect(service.searchStocks('삼성'), throwsA(isA<StockServiceException>()));
   });
 
   test('종목 메타데이터 응답을 Stock 모델로 변환한다', () async {
@@ -118,13 +116,85 @@ void main() {
     });
     final NaverStockService service = NaverStockService(client: client);
 
-    final Map<String, StockQuote> quotes = await service.fetchQuotes(
-      <String>['005930', '000660'],
-    );
+    final Map<String, StockQuote> quotes = await service.fetchQuotes(<String>[
+      '005930',
+      '000660',
+    ]);
 
     expect(quotes, hasLength(2));
     expect(quotes['005930']!.changeAmount, -400);
     expect(quotes['000660']!.changeAmount, 9500);
+  });
+
+  test('일별 시세 HTML을 날짜와 가격 모델로 변환한다', () async {
+    final MockClient client = MockClient((http.Request request) async {
+      expect(request.url.host, 'finance.naver.com');
+      expect(request.headers['User-Agent'], 'Mozilla/5.0');
+
+      const String html = '''
+        <table class="type2">
+          <tr>
+            <td><span>2026.03.27</span></td>
+            <td><span>179,700</span></td>
+            <td class="num nv01"><span>400</span></td>
+            <td><span>172,100</span></td>
+            <td><span>181,700</span></td>
+            <td><span>172,000</span></td>
+            <td><span>29,113,466</span></td>
+          </tr>
+        </table>
+      ''';
+
+      return http.Response.bytes(latin1.encode(html), 200);
+    });
+    final NaverStockService service = NaverStockService(client: client);
+
+    final List<DailyPrice> prices = await service.fetchDailyPrices(
+      '005930',
+      DailyPricePeriod.oneMonth,
+    );
+
+    expect(prices, hasLength(1));
+    expect(prices.first.localDate, '20260327');
+    expect(prices.first.changeAmount, -400);
+    expect(prices.first.accumulatedTradingVolume, 29113466);
+  });
+
+  test('기존 HTML 요청이 실패하면 일별 시세 JSON으로 전환한다', () async {
+    final MockClient client = MockClient((http.Request request) async {
+      if (request.url.host == 'finance.naver.com') {
+        return http.Response('forbidden', 403);
+      }
+
+      final int page = int.parse(request.url.queryParameters['page']!);
+
+      if (page > 1) {
+        return http.Response('[]', 200);
+      }
+
+      final List<Map<String, dynamic>> responseBody = <Map<String, dynamic>>[
+        <String, dynamic>{
+          'localTradedAt': '2026-03-27',
+          'closePrice': '179,700',
+          'compareToPreviousClosePrice': '-400',
+          'openPrice': '172,100',
+          'highPrice': '181,700',
+          'lowPrice': '172,000',
+          'accumulatedTradingVolume': 29113466,
+        },
+      ];
+
+      return http.Response(jsonEncode(responseBody), 200);
+    });
+    final NaverStockService service = NaverStockService(client: client);
+
+    final List<DailyPrice> prices = await service.fetchDailyPrices(
+      '005930',
+      DailyPricePeriod.oneMonth,
+    );
+
+    expect(prices, hasLength(1));
+    expect(prices.first.closePrice, 179700);
   });
 }
 

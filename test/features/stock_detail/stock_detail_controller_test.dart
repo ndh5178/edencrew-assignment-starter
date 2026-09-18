@@ -1,4 +1,5 @@
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/models/daily_price.dart';
 import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
 import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:edencrew_assignment_starter/features/stock_detail/stock_detail_controller.dart';
@@ -12,9 +13,11 @@ void main() {
   );
 
   test('시세를 받아 상세 정보 상태를 success로 변경한다', () async {
+    final _FakeWatchlistService service = _FakeWatchlistService(hasQuote: true);
     final StockDetailController controller = StockDetailController(
       stock: samsungElectronics,
-      watchlistService: _FakeWatchlistService(hasQuote: true),
+      watchlistService: service,
+      dailyPriceService: service,
     );
 
     await controller.initialize();
@@ -27,9 +30,13 @@ void main() {
   });
 
   test('시세가 없으면 failure 상태로 변경한다', () async {
+    final _FakeWatchlistService service = _FakeWatchlistService(
+      hasQuote: false,
+    );
     final StockDetailController controller = StockDetailController(
       stock: samsungElectronics,
-      watchlistService: _FakeWatchlistService(hasQuote: false),
+      watchlistService: service,
+      dailyPriceService: service,
     );
 
     await controller.initialize();
@@ -39,12 +46,52 @@ void main() {
 
     controller.dispose();
   });
+
+  test('같은 기간을 다시 선택하면 메모리 캐시를 사용한다', () async {
+    final _FakeWatchlistService service = _FakeWatchlistService(hasQuote: true);
+    final StockDetailController controller = StockDetailController(
+      stock: samsungElectronics,
+      watchlistService: service,
+      dailyPriceService: service,
+    );
+
+    await controller.initialize();
+    await controller.selectPeriod(DailyPricePeriod.threeMonths);
+    await controller.selectPeriod(DailyPricePeriod.oneMonth);
+
+    expect(service.dailyPriceRequestCount, 2);
+    expect(controller.selectedPeriod, DailyPricePeriod.oneMonth);
+    expect(controller.dailyPriceStatus, DailyPriceStatus.success);
+
+    controller.dispose();
+  });
 }
 
-class _FakeWatchlistService implements WatchlistService {
+class _FakeWatchlistService implements WatchlistService, DailyPriceService {
   _FakeWatchlistService({required this.hasQuote});
 
   final bool hasQuote;
+  int dailyPriceRequestCount = 0;
+
+  @override
+  Future<List<DailyPrice>> fetchDailyPrices(
+    String symbol,
+    DailyPricePeriod period,
+  ) async {
+    dailyPriceRequestCount += 1;
+
+    return const <DailyPrice>[
+      DailyPrice(
+        localDate: '20260327',
+        closePrice: 179700,
+        changeAmount: -400,
+        openPrice: 172100,
+        highPrice: 181700,
+        lowPrice: 172000,
+        accumulatedTradingVolume: 29113466,
+      ),
+    ];
+  }
 
   @override
   Future<Stock> fetchStockMetadata(String symbol) async {

@@ -9,18 +9,21 @@ import '../../data/naver_stock_service.dart';
 import '../../shared/formatters/number_formatter.dart';
 import '../../theme/theme.dart';
 import '../favorites/favorite_controller.dart';
+import 'price_chart_section.dart';
 import 'stock_detail_controller.dart';
 
 class StockDetailScreen extends StatefulWidget {
   const StockDetailScreen({
     required this.stock,
     required this.watchlistService,
+    required this.dailyPriceService,
     required this.favoriteController,
     super.key,
   });
 
   final Stock stock;
   final WatchlistService watchlistService;
+  final DailyPriceService dailyPriceService;
   final FavoriteController favoriteController;
 
   @override
@@ -38,6 +41,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
     _detailController = StockDetailController(
       stock: widget.stock,
       watchlistService: widget.watchlistService,
+      dailyPriceService: widget.dailyPriceService,
     );
     unawaited(_detailController.initialize());
   }
@@ -88,7 +92,10 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
       case StockDetailStatus.loading:
         return const _StockDetailLoadingView();
       case StockDetailStatus.success:
-        return _StockDetailContent(detail: _detailController.detail!);
+        return _StockDetailContent(
+          detail: _detailController.detail!,
+          controller: _detailController,
+        );
       case StockDetailStatus.failure:
         return _StockDetailFailureView(onRetry: _detailController.retry);
     }
@@ -310,9 +317,10 @@ class _StockDetailFailureView extends StatelessWidget {
 }
 
 class _StockDetailContent extends StatelessWidget {
-  const _StockDetailContent({required this.detail});
+  const _StockDetailContent({required this.detail, required this.controller});
 
   final StockDetail detail;
+  final StockDetailController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +333,11 @@ class _StockDetailContent extends StatelessWidget {
         children: <Widget>[
           _CurrentPrice(quote: detail.quote),
           SizedBox(height: dimens.space6),
+          StockPriceChart(controller: controller),
+          SizedBox(height: dimens.space6),
           _QuoteStatistics(quote: detail.quote),
+          SizedBox(height: dimens.space6),
+          DailyPriceTable(controller: controller),
         ],
       ),
     );

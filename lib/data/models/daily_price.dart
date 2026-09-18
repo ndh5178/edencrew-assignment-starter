@@ -1,3 +1,15 @@
+enum DailyPricePeriod {
+  oneMonth(label: '1개월', pageCount: 2),
+  threeMonths(label: '3개월', pageCount: 6),
+  sixMonths(label: '6개월', pageCount: 12),
+  oneYear(label: '1년', pageCount: 25);
+
+  const DailyPricePeriod({required this.label, required this.pageCount});
+
+  final String label;
+  final int pageCount;
+}
+
 class DailyPrice {
   const DailyPrice({
     required this.localDate,
