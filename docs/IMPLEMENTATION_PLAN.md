@@ -45,13 +45,14 @@ main.dart
 - `StockQuote` 모델 작성
 - `StockDetail` 모델 작성
 - `DailyPrice` 모델 작성
-- Naver 응답을 모델로 변환하는 기준 정의
+- 검색, 메타데이터, 실시간 시세 DTO 작성
+- DTO가 Naver 응답을 읽고 앱 모델로 변환하도록 구성
 
 ### 실행 흐름
 
 ```text
 Naver 응답
-  -> data의 변환 코드
+  -> data의 DTO
   -> 앱 데이터 모델
   -> controller와 화면에서 사용
 ```
@@ -59,6 +60,7 @@ Naver 응답
 ### 완료 기준
 
 - 화면에서 Naver의 JSON 필드명을 직접 사용하지 않는다.
+- 앱 모델에서 Naver의 JSON 필드명을 직접 사용하지 않는다.
 - 종목, 현재가, 상세 정보, 일봉 데이터의 역할이 구분된다.
 
 ## 3. 검색 기능
