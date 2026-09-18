@@ -7,6 +7,7 @@ class StockSearchDto {
     required this.name,
     required this.typeName,
     required this.nationCode,
+    required this.category,
   });
 
   factory StockSearchDto.fromJson(Map<String, dynamic> json) {
@@ -15,6 +16,7 @@ class StockSearchDto {
       name: readRequiredString(json['name'], 'name'),
       typeName: readRequiredString(json['typeName'], 'typeName'),
       nationCode: readRequiredString(json['nationCode'], 'nationCode'),
+      category: readRequiredString(json['category'], 'category'),
     );
   }
 
@@ -22,6 +24,7 @@ class StockSearchDto {
   final String name;
   final String typeName;
   final String nationCode;
+  final String category;
 
   Stock toModel() {
     return Stock(

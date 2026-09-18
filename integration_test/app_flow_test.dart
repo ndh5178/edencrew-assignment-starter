@@ -1,4 +1,6 @@
-import 'package:edencrew_assignment_starter/main.dart' as app;
+import 'package:edencrew_assignment_starter/app/app.dart';
+import 'package:edencrew_assignment_starter/data/models/stock.dart';
+import 'package:edencrew_assignment_starter/data/naver_stock_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -6,9 +8,18 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  Future<void> pauseForObservation(WidgetTester tester) async {
+    await tester.pump(const Duration(seconds: 1));
+  }
+
   Future<void> launchApp(WidgetTester tester) async {
-    app.main();
+    runApp(
+      EdencrewAssignmentApp(
+        stockSearchService: _FakeStockSearchService(),
+      ),
+    );
     await tester.pumpAndSettle();
+    await pauseForObservation(tester);
   }
 
   testWidgets('00. 앱이 정상적으로 실행된다', (WidgetTester tester) async {
@@ -26,11 +37,13 @@ void main() {
 
       await tester.tap(find.byKey(const Key('bottom_nav_search')));
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       expect(find.byKey(const Key('search_screen')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('bottom_nav_watchlist')));
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       expect(find.byKey(const Key('watchlist_screen')), findsOneWidget);
     },
@@ -43,18 +56,19 @@ void main() {
 
       await tester.tap(find.byKey(const Key('bottom_nav_search')));
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       await tester.enterText(
         find.byKey(const Key('stock_search_field')),
         '삼성',
       );
       await tester.pumpAndSettle();
+      await pauseForObservation(tester);
 
       expect(find.byKey(const Key('search_result_005930')), findsOneWidget);
       expect(find.text('삼성전자'), findsOneWidget);
       expect(find.textContaining('005930'), findsOneWidget);
     },
-    skip: true,
   );
 
   testWidgets(
@@ -168,4 +182,22 @@ void main() {
     },
     skip: true,
   );
+}
+
+class _FakeStockSearchService implements StockSearchService {
+  @override
+  Future<List<Stock>> searchStocks(String query) async {
+    if (!query.contains('삼성')) {
+      return <Stock>[];
+    }
+
+    return const <Stock>[
+      Stock(symbol: '005930', name: '삼성전자', market: '코스피'),
+      Stock(symbol: '005935', name: '삼성전자우', market: '코스피'),
+      Stock(symbol: '207940', name: '삼성바이오로직스', market: '코스피'),
+    ];
+  }
+
+  @override
+  void close() {}
 }

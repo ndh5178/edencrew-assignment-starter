@@ -10,6 +10,7 @@ void main() {
         'name': '삼성전자',
         'typeName': '코스피',
         'nationCode': 'KOR',
+        'category': 'stock',
       };
 
       final StockSearchDto dto = StockSearchDto.fromJson(json);
