@@ -17,12 +17,14 @@ class EdencrewAssignmentApp extends StatefulWidget {
   const EdencrewAssignmentApp({
     this.stockSearchService,
     this.watchlistService,
+    this.dailyPriceService,
     this.favoriteStorage,
     super.key,
   });
 
   final StockSearchService? stockSearchService;
   final WatchlistService? watchlistService;
+  final DailyPriceService? dailyPriceService;
   final FavoriteStorage? favoriteStorage;
 
   @override
@@ -35,6 +37,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
   late final AppController _appController;
   late final StockSearchService _stockSearchService;
   late final WatchlistService _watchlistService;
+  late final DailyPriceService _dailyPriceService;
   NaverStockService? _ownedNaverStockService;
   late final FavoriteController _favoriteController;
 
@@ -42,12 +45,15 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
   void initState() {
     super.initState();
     _appController = AppController();
-    if (widget.stockSearchService == null || widget.watchlistService == null) {
+    if (widget.stockSearchService == null ||
+        widget.watchlistService == null ||
+        widget.dailyPriceService == null) {
       _ownedNaverStockService = NaverStockService();
     }
 
     _stockSearchService = widget.stockSearchService ?? _ownedNaverStockService!;
     _watchlistService = widget.watchlistService ?? _ownedNaverStockService!;
+    _dailyPriceService = widget.dailyPriceService ?? _ownedNaverStockService!;
     _favoriteController = FavoriteController(
       storage: widget.favoriteStorage ?? SharedPreferencesFavoriteStorage(),
     );
@@ -72,6 +78,7 @@ class _EdencrewAssignmentAppState extends State<EdencrewAssignmentApp> {
         controller: _appController,
         stockSearchService: _stockSearchService,
         watchlistService: _watchlistService,
+        dailyPriceService: _dailyPriceService,
         favoriteController: _favoriteController,
       ),
     );
@@ -83,6 +90,7 @@ class AppShell extends StatelessWidget {
     required this.controller,
     required this.stockSearchService,
     required this.watchlistService,
+    required this.dailyPriceService,
     required this.favoriteController,
     super.key,
   });
@@ -90,6 +98,7 @@ class AppShell extends StatelessWidget {
   final AppController controller;
   final StockSearchService stockSearchService;
   final WatchlistService watchlistService;
+  final DailyPriceService dailyPriceService;
   final FavoriteController favoriteController;
 
   @override
@@ -133,6 +142,7 @@ class AppShell extends StatelessWidget {
           return StockDetailScreen(
             stock: stock,
             watchlistService: watchlistService,
+            dailyPriceService: dailyPriceService,
             favoriteController: favoriteController,
           );
         },
