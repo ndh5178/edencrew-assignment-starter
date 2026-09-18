@@ -17,6 +17,7 @@ lib/
 │   ├── app.dart                      앱 테마와 첫 화면 구성
 │   └── app_controller.dart           하단 탭과 앱 공통 상태 관리
 ├── data/
+│   ├── dtos/                         Naver 응답 필드 파싱과 모델 변환
 │   ├── models/                       주식, 시세, 상세, 일봉 모델
 │   ├── naver_stock_service.dart      Naver API 요청과 응답 변환
 │   └── favorite_storage.dart         관심 종목 코드 로컬 저장
@@ -67,7 +68,7 @@ lib/
 
 ## 4. Naver API 계약
 
-Naver의 응답을 화면에서 직접 사용하지 않는다. `data/naver_stock_service.dart`에서 응답을 앱 모델로 변환한 뒤 각 기능의 controller에 전달한다.
+Naver의 응답을 화면에서 직접 사용하지 않는다. `data/dtos`에서 외부 응답을 읽고 앱 모델로 변환한 뒤 각 기능의 controller에 전달한다.
 
 ### 종목 검색
 
