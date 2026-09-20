@@ -5,20 +5,14 @@ import 'package:flutter/foundation.dart';
 import '../../data/models/stock.dart';
 import '../../data/naver_stock_service.dart';
 
-enum SearchStatus {
-  initial,
-  loading,
-  success,
-  empty,
-  failure,
-}
+enum SearchStatus { initial, loading, success, empty, failure }
 
 class StockSearchController extends ChangeNotifier {
   StockSearchController({
     required StockSearchService searchService,
     Duration debounceDuration = const Duration(milliseconds: 350),
-  })  : _searchService = searchService,
-        _debounceDuration = debounceDuration;
+  }) : _searchService = searchService,
+       _debounceDuration = debounceDuration;
 
   final StockSearchService _searchService;
   final Duration _debounceDuration;
@@ -26,6 +20,8 @@ class StockSearchController extends ChangeNotifier {
   Timer? _debounceTimer;
   int _searchVersion = 0;
   bool _isDisposed = false;
+  final Map<String, ({DateTime expires, List<Stock> stocks})> _cache = {};
+  final Map<String, Future<List<Stock>>> _pending = {};
 
   String _query = '';
   SearchStatus _status = SearchStatus.initial;
@@ -61,6 +57,16 @@ class StockSearchController extends ChangeNotifier {
       return;
     }
 
+    final cached = _cache.remove(_query);
+    if (cached != null && DateTime.now().isBefore(cached.expires)) {
+      _cache[_query] = cached;
+      _results = cached.stocks;
+      _status = _results.isEmpty ? SearchStatus.empty : SearchStatus.success;
+      _errorMessage = null;
+      notifyListeners();
+      return;
+    }
+
     _status = SearchStatus.loading;
     _results = <Stock>[];
     _errorMessage = null;
@@ -79,6 +85,7 @@ class StockSearchController extends ChangeNotifier {
   }
 
   void retry() {
+    _debounceTimer?.cancel();
     if (_query.isEmpty) {
       return;
     }
@@ -95,7 +102,22 @@ class StockSearchController extends ChangeNotifier {
 
   Future<void> _requestSearch(String query, int requestedVersion) async {
     try {
-      final List<Stock> stocks = await _searchService.searchStocks(query);
+      final List<Stock> stocks = await _pending.putIfAbsent(
+        query,
+        () => _searchService.searchStocks(query).whenComplete(() {
+          _pending.remove(query);
+        }),
+      );
+      if (!_isDisposed) {
+        _cache.remove(query);
+        _cache[query] = (
+          expires: DateTime.now().add(const Duration(minutes: 5)),
+          stocks: stocks,
+        );
+        while (_cache.length > 30) {
+          _cache.remove(_cache.keys.first);
+        }
+      }
 
       if (_shouldIgnoreResponse(requestedVersion)) {
         return;

@@ -9,6 +9,26 @@ import 'package:edencrew_assignment_starter/features/watchlist/watchlist_control
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('종목 정보 응답 전에도 시세 요청을 시작한다', () async {
+    final favorites = FavoriteController(
+      storage: _MemoryFavoriteStorage(initialSymbols: {'005930'}),
+    );
+    await favorites.initialize();
+    final service = _FakeWatchlistService();
+    service.metadataGate = Completer<void>();
+    final controller = WatchlistController(
+      favoriteController: favorites,
+      watchlistService: service,
+    );
+    controller.initialize();
+    expect(service.quoteCalls, 1);
+    expect(controller.status, WatchlistStatus.loading);
+    service.metadataGate!.complete();
+    await _waitUntilLoaded(controller);
+    expect(controller.sortedItems.first.quote, isNotNull);
+    controller.dispose();
+    favorites.dispose();
+  });
   test('관심 종목이 없으면 empty 상태가 된다', () async {
     final FavoriteController favoriteController = FavoriteController(
       storage: _MemoryFavoriteStorage(),
@@ -29,9 +49,7 @@ void main() {
 
   test('관심 종목의 메타데이터와 시세를 불러온다', () async {
     final FavoriteController favoriteController = FavoriteController(
-      storage: _MemoryFavoriteStorage(
-        initialSymbols: <String>{'005930'},
-      ),
+      storage: _MemoryFavoriteStorage(initialSymbols: <String>{'005930'}),
     );
     await favoriteController.initialize();
     final WatchlistController watchlistController = WatchlistController(
@@ -45,10 +63,7 @@ void main() {
     expect(watchlistController.status, WatchlistStatus.success);
     expect(watchlistController.sortedItems, hasLength(1));
     expect(watchlistController.sortedItems.first.stock.name, '삼성전자');
-    expect(
-      watchlistController.sortedItems.first.quote!.currentPrice,
-      179700,
-    );
+    expect(watchlistController.sortedItems.first.quote!.currentPrice, 179700);
 
     watchlistController.dispose();
     favoriteController.dispose();
@@ -80,9 +95,7 @@ void main() {
 
   test('시세 새로고침이 실패해도 기존 가격을 유지한다', () async {
     final FavoriteController favoriteController = FavoriteController(
-      storage: _MemoryFavoriteStorage(
-        initialSymbols: <String>{'005930'},
-      ),
+      storage: _MemoryFavoriteStorage(initialSymbols: <String>{'005930'}),
     );
     await favoriteController.initialize();
     final _FakeWatchlistService service = _FakeWatchlistService();
@@ -97,10 +110,7 @@ void main() {
     await watchlistController.refreshQuotes();
 
     expect(watchlistController.hasQuoteLoadFailure, isTrue);
-    expect(
-      watchlistController.sortedItems.first.quote!.currentPrice,
-      179700,
-    );
+    expect(watchlistController.sortedItems.first.quote!.currentPrice, 179700);
 
     watchlistController.dispose();
     favoriteController.dispose();
@@ -130,7 +140,7 @@ Future<void> _waitUntilLoaded(WatchlistController controller) async {
 
 class _MemoryFavoriteStorage implements FavoriteStorage {
   _MemoryFavoriteStorage({Set<String>? initialSymbols})
-      : _symbols = initialSymbols ?? <String>{};
+    : _symbols = initialSymbols ?? <String>{};
 
   final Set<String> _symbols;
 
@@ -149,28 +159,22 @@ class _MemoryFavoriteStorage implements FavoriteStorage {
 
 class _FakeWatchlistService implements WatchlistService {
   bool shouldFailQuotes = false;
+  Completer<void>? metadataGate;
+  int quoteCalls = 0;
 
   @override
   Future<Stock> fetchStockMetadata(String symbol) async {
+    if (metadataGate != null) await metadataGate!.future;
     if (symbol == '005930') {
-      return const Stock(
-        symbol: '005930',
-        name: '삼성전자',
-        market: '코스피',
-      );
+      return const Stock(symbol: '005930', name: '삼성전자', market: '코스피');
     }
 
-    return const Stock(
-      symbol: '000660',
-      name: 'SK하이닉스',
-      market: '코스피',
-    );
+    return const Stock(symbol: '000660', name: 'SK하이닉스', market: '코스피');
   }
 
   @override
-  Future<Map<String, StockQuote>> fetchQuotes(
-    Iterable<String> symbols,
-  ) async {
+  Future<Map<String, StockQuote>> fetchQuotes(Iterable<String> symbols) async {
+    quoteCalls++;
     if (shouldFailQuotes) {
       throw const StockServiceException('시세 요청 실패');
     }

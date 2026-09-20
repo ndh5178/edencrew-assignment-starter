@@ -41,6 +41,22 @@ class NaverStockService
   final http.Client _client;
   final bool _ownsClient;
   static const Duration _requestTimeout = Duration(seconds: 12);
+  final Map<String, _DailyPageSession> _pageSessions = {};
+
+  _DailyPageSession _sessionFor(String symbol) {
+    final now = DateTime.now();
+    final existing = _pageSessions[symbol];
+    if (existing != null && now.isBefore(existing.expires)) {
+      return existing;
+    }
+    _pageSessions.remove(symbol);
+    final session = _DailyPageSession(now.add(const Duration(minutes: 5)));
+    _pageSessions[symbol] = session;
+    while (_pageSessions.length > 20) {
+      _pageSessions.remove(_pageSessions.keys.first);
+    }
+    return session;
+  }
 
   @override
   Future<List<Stock>> searchStocks(String query) async {
@@ -263,6 +279,22 @@ class NaverStockService
   Future<_DailyPriceHtmlPage> _fetchDailyPriceHtmlPage(
     String symbol,
     int page,
+  ) {
+    final session = _sessionFor(symbol);
+    return session.html.putIfAbsent(
+      page,
+      () => _fetchDailyPriceHtmlPageUncached(symbol, page).catchError((
+        Object error,
+      ) {
+        session.html.remove(page);
+        throw error;
+      }),
+    );
+  }
+
+  Future<_DailyPriceHtmlPage> _fetchDailyPriceHtmlPageUncached(
+    String symbol,
+    int page,
   ) async {
     final Uri uri = Uri.https(
       'finance.naver.com',
@@ -339,7 +371,20 @@ class NaverStockService
     return _DailyPriceHtmlPage(prices: prices, lastPage: lastPage);
   }
 
-  Future<List<DailyPrice>> _fetchDailyPriceJsonPage(
+  Future<List<DailyPrice>> _fetchDailyPriceJsonPage(String symbol, int page) {
+    final session = _sessionFor(symbol);
+    return session.json.putIfAbsent(
+      page,
+      () => _fetchDailyPriceJsonPageUncached(symbol, page).catchError((
+        Object error,
+      ) {
+        session.json.remove(page);
+        throw error;
+      }),
+    );
+  }
+
+  Future<List<DailyPrice>> _fetchDailyPriceJsonPageUncached(
     String symbol,
     int page,
   ) async {
@@ -384,14 +429,9 @@ class NaverStockService
     return int.parse(normalizedValue);
   }
 
-  Future<http.Response> _get(
-    Uri uri, {
-    Map<String, String>? headers,
-  }) async {
+  Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) async {
     try {
-      return await _client
-          .get(uri, headers: headers)
-          .timeout(_requestTimeout);
+      return await _client.get(uri, headers: headers).timeout(_requestTimeout);
     } on TimeoutException {
       throw const StockServiceException('요청 시간이 초과되었습니다.');
     } on http.ClientException {
@@ -449,6 +489,14 @@ class NaverStockService
       _client.close();
     }
   }
+}
+
+// 같은 세션의 페이지는 완료 결과와 진행 중 Future를 함께 재사용한다.
+class _DailyPageSession {
+  _DailyPageSession(this.expires);
+  final DateTime expires;
+  final Map<int, Future<_DailyPriceHtmlPage>> html = {};
+  final Map<int, Future<List<DailyPrice>>> json = {};
 }
 
 class _DailyPriceHtmlPage {

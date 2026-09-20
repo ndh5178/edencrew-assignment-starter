@@ -9,6 +9,30 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('겹치는 기간과 동시 요청은 일봉 페이지를 공유한다', () async {
+    final calls = <int, int>{};
+    final client = MockClient((request) async {
+      final page = int.parse(request.url.queryParameters['page']!);
+      calls.update(page, (count) => count + 1, ifAbsent: () => 1);
+      await Future<void>.delayed(Duration.zero);
+      return http.Response('''
+        <table class="type2"><tr>
+          <td>2026.03.27</td><td>100</td><td>1</td><td>99</td>
+          <td>101</td><td>98</td><td>1000</td>
+        </tr></table><table><tr><td class="pgRR"><a href="?page=25">last</a></td></tr></table>
+      ''', 200);
+    });
+    final service = NaverStockService(client: client);
+    await Future.wait([
+      service.fetchDailyPrices('005930', DailyPricePeriod.oneMonth),
+      service.fetchDailyPrices('005930', DailyPricePeriod.threeMonths),
+    ]);
+    expect(calls.length, 6);
+    expect(calls.values, everyElement(1));
+    await service.fetchDailyPrices('005930', DailyPricePeriod.oneMonth);
+    expect(calls.values, everyElement(1));
+    client.close();
+  });
   test('국내 6자리 주식만 검색 결과 모델로 변환한다', () async {
     final MockClient client = MockClient((http.Request request) async {
       expect(request.url.host, 'ac.stock.naver.com');

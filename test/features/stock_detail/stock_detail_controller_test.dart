@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:edencrew_assignment_starter/data/models/stock.dart';
 import 'package:edencrew_assignment_starter/data/models/daily_price.dart';
 import 'package:edencrew_assignment_starter/data/models/stock_quote.dart';
@@ -6,6 +7,23 @@ import 'package:edencrew_assignment_starter/features/stock_detail/stock_detail_c
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('캐시로 돌아온 뒤 늦은 다른 기간 응답을 무시한다', () async {
+    final service = _FakeWatchlistService(hasQuote: true);
+    final controller = StockDetailController(
+      stock: const Stock(symbol: '005930', name: '삼성전자', market: '코스피'),
+      watchlistService: service,
+      dailyPriceService: service,
+    );
+    await controller.initialize();
+    service.pending = Completer<List<DailyPrice>>();
+    final loading = controller.selectPeriod(DailyPricePeriod.threeMonths);
+    await controller.selectPeriod(DailyPricePeriod.oneMonth);
+    service.pending!.complete([]);
+    await loading;
+    expect(controller.selectedPeriod, DailyPricePeriod.oneMonth);
+    expect(controller.dailyPrices, hasLength(1));
+    controller.dispose();
+  });
   const Stock samsungElectronics = Stock(
     symbol: '005930',
     name: '삼성전자',
@@ -72,6 +90,7 @@ class _FakeWatchlistService implements WatchlistService, DailyPriceService {
 
   final bool hasQuote;
   int dailyPriceRequestCount = 0;
+  Completer<List<DailyPrice>>? pending;
 
   @override
   Future<List<DailyPrice>> fetchDailyPrices(
@@ -79,6 +98,7 @@ class _FakeWatchlistService implements WatchlistService, DailyPriceService {
     DailyPricePeriod period,
   ) async {
     dailyPriceRequestCount += 1;
+    if (pending != null) return pending!.future;
 
     return const <DailyPrice>[
       DailyPrice(
