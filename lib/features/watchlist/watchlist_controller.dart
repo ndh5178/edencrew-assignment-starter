@@ -7,12 +7,7 @@ import '../../data/models/stock_quote.dart';
 import '../../data/naver_stock_service.dart';
 import '../favorites/favorite_controller.dart';
 
-enum WatchlistStatus {
-  loading,
-  empty,
-  success,
-  failure,
-}
+enum WatchlistStatus { loading, empty, success, failure }
 
 enum WatchlistSort {
   currentPrice('현재가순'),
@@ -25,10 +20,7 @@ enum WatchlistSort {
 }
 
 class WatchlistItem {
-  const WatchlistItem({
-    required this.stock,
-    this.quote,
-  });
+  const WatchlistItem({required this.stock, this.quote});
 
   final Stock stock;
   final StockQuote? quote;
@@ -42,8 +34,8 @@ class WatchlistController extends ChangeNotifier {
   WatchlistController({
     required FavoriteController favoriteController,
     required WatchlistService watchlistService,
-  })  : _favoriteController = favoriteController,
-        _watchlistService = watchlistService;
+  }) : _favoriteController = favoriteController,
+       _watchlistService = watchlistService;
 
   final FavoriteController _favoriteController;
   final WatchlistService _watchlistService;
@@ -166,6 +158,16 @@ class WatchlistController extends ChangeNotifier {
     notifyListeners();
 
     final List<Future<Stock?>> metadataRequests = <Future<Stock?>>[];
+    // 메타데이터를 기다리는 동안 시세도 조회한다. 실패는 즉시 처리해 둔다.
+    final quoteRequest = _watchlistService
+        .fetchQuotes(symbols)
+        .then(
+          (quotes) => quotes,
+          onError: (Object error, StackTrace stack) {
+            debugPrint('관심 종목 시세 조회 실패: $error');
+            return <String, StockQuote>{};
+          },
+        );
 
     for (final String symbol in symbols) {
       metadataRequests.add(_loadMetadata(symbol));
@@ -198,7 +200,16 @@ class WatchlistController extends ChangeNotifier {
     _isRefreshingQuotes = true;
     notifyListeners();
 
-    await _loadQuotes(requestedVersion);
+    final quotes = await quoteRequest;
+    if (_shouldIgnoreResponse(requestedVersion)) {
+      return;
+    }
+    _items = _items
+        .map((item) => item.withQuote(quotes[item.stock.symbol]))
+        .toList();
+    _hasQuoteLoadFailure = _items.any((item) => item.quote == null);
+    _isRefreshingQuotes = false;
+    notifyListeners();
   }
 
   Future<Stock?> _loadMetadata(String symbol) async {
@@ -212,9 +223,8 @@ class WatchlistController extends ChangeNotifier {
 
   Future<void> _loadQuotes(int requestedVersion) async {
     try {
-      final Map<String, StockQuote> quotes = await _watchlistService.fetchQuotes(
-        _items.map((WatchlistItem item) => item.stock.symbol),
-      );
+      final Map<String, StockQuote> quotes = await _watchlistService
+          .fetchQuotes(_items.map((WatchlistItem item) => item.stock.symbol));
 
       if (_shouldIgnoreResponse(requestedVersion)) {
         return;

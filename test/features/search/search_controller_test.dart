@@ -6,6 +6,21 @@ import 'package:edencrew_assignment_starter/features/search/search_controller.da
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('재검색은 디바운스와 추가 요청 없이 캐시를 표시한다', () async {
+    final service = _ImmediateSearchService(
+      results: const [Stock(symbol: '005930', name: '삼성전자', market: '코스피')],
+    );
+    final controller = StockSearchController(searchService: service);
+    controller.onQueryChanged('삼성');
+    controller.retry();
+    await Future<void>.delayed(Duration.zero);
+    controller.clearSearch();
+    controller.onQueryChanged('삼성');
+    expect(controller.status, SearchStatus.success);
+    expect(service.calls, 1);
+    controller.dispose();
+  });
+
   test('검색 결과가 있으면 success 상태가 된다', () async {
     final _ImmediateSearchService service = _ImmediateSearchService(
       results: const <Stock>[
@@ -58,20 +73,14 @@ void main() {
     controller.onQueryChanged('카카오');
     await Future<void>.delayed(Duration.zero);
 
-    service.complete(
-      '카카오',
-      const <Stock>[
-        Stock(symbol: '035720', name: '카카오', market: '코스피'),
-      ],
-    );
+    service.complete('카카오', const <Stock>[
+      Stock(symbol: '035720', name: '카카오', market: '코스피'),
+    ]);
     await Future<void>.delayed(Duration.zero);
 
-    service.complete(
-      '삼성',
-      const <Stock>[
-        Stock(symbol: '005930', name: '삼성전자', market: '코스피'),
-      ],
-    );
+    service.complete('삼성', const <Stock>[
+      Stock(symbol: '005930', name: '삼성전자', market: '코스피'),
+    ]);
     await Future<void>.delayed(Duration.zero);
 
     expect(controller.status, SearchStatus.success);
@@ -85,9 +94,11 @@ class _ImmediateSearchService implements StockSearchService {
   _ImmediateSearchService({required this.results});
 
   final List<Stock> results;
+  int calls = 0;
 
   @override
   Future<List<Stock>> searchStocks(String query) async {
+    calls++;
     return results;
   }
 

@@ -250,6 +250,7 @@ UI와 캔들 차트는 별도의 UI·차트 패키지 없이 Flutter 위젯과 `
 | [`docs/NAVER_API.md`](docs/NAVER_API.md) | 제공된 Naver 데이터 연동 가이드 |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 폴더 구조, 데이터 계약과 캐시 기준 |
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | 브랜치별 구현 순서 |
+| [`docs/CODE_FLOW_GUIDE.md`](docs/CODE_FLOW_GUIDE.md) | Flutter 코드의 실제 실행 흐름과 웹 개념 대응 |
 | [`lib/theme/README.md`](lib/theme/README.md) | Figma 디자인 토큰과 Dart 필드 대응표 |
 
 ## 라이선스 및 공개 범위

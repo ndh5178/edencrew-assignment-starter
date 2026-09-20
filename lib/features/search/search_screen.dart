@@ -67,6 +67,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 key: const Key('stock_search_field'),
                 controller: _textEditingController,
                 onChanged: _searchController.onQueryChanged,
+                onSubmitted: (_) => _searchController.retry(),
                 textInputAction: TextInputAction.search,
                 style: TextStyle(
                   color: colors.textPrimary,
@@ -168,8 +169,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _toggleFavorite(Stock stock) async {
     try {
-      final FavoriteChange? change =
-          await widget.favoriteController.toggleFavorite(stock.symbol);
+      final FavoriteChange? change = await widget.favoriteController
+          .toggleFavorite(stock.symbol);
 
       if (!mounted || change == null) {
         return;

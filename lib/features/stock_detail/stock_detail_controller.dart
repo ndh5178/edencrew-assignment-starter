@@ -26,6 +26,7 @@ class StockDetailController extends ChangeNotifier {
       <DailyPricePeriod, List<DailyPrice>>{};
 
   StockDetailStatus _status = StockDetailStatus.loading;
+  DateTime _cacheExpires = DateTime.now().add(const Duration(minutes: 5));
   StockDetail? _detail;
   DailyPriceStatus _dailyPriceStatus = DailyPriceStatus.loading;
   DailyPricePeriod _selectedPeriod = DailyPricePeriod.oneMonth;
@@ -84,6 +85,11 @@ class StockDetailController extends ChangeNotifier {
     DailyPricePeriod period, {
     bool ignoreCache = false,
   }) async {
+    final int requestId = ++_dailyPriceRequestId;
+    if (DateTime.now().isAfter(_cacheExpires)) {
+      _dailyPriceCache.clear();
+      _cacheExpires = DateTime.now().add(const Duration(minutes: 5));
+    }
     final List<DailyPrice>? cachedPrices = _dailyPriceCache[period];
 
     if (!ignoreCache && cachedPrices != null) {
@@ -93,7 +99,6 @@ class StockDetailController extends ChangeNotifier {
       return;
     }
 
-    final int requestId = ++_dailyPriceRequestId;
     _dailyPrices = <DailyPrice>[];
     _dailyPriceStatus = DailyPriceStatus.loading;
     notifyListeners();
