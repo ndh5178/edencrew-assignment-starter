@@ -33,6 +33,8 @@
 
 Naver API가 브라우저의 CORS 요청을 허용하지 않으므로 Chrome이 아닌 Android 에뮬레이터 또는 모바일 기기에서 실행해야 합니다.
 
+서체는 `assets/fonts/`에 포함한 Noto Sans KR의 Regular, Medium, Bold 파일을 사용합니다. 운영체제의 기본 한글 서체에 따라 화면이 달라지지 않도록 앱 전역 테마에 동일한 글꼴을 연결했습니다.
+
 ## 실행 방법
 
 ### 1. 의존성 설치
@@ -69,6 +71,12 @@ flutter test integration_test/app_flow_test.dart -d emulator-5554
 ```
 
 라이브 E2E는 검색, 관심 등록, 정렬, 상세 진입, 기간 변경, 차트 조회, 관심 상태 저장을 에뮬레이터에서 자동으로 수행합니다. 실제 네트워크를 사용하므로 Naver 서버 상태나 호출 제한의 영향을 받을 수 있으며 최대 실행 시간은 5분입니다. 테스트가 추가한 삼성전자 관심 상태는 마지막 단계에서 제거합니다.
+
+## 최종 검증 결과
+
+- `flutter analyze`: 통과
+- `flutter test`: 전체 테스트 통과
+- 라이브 E2E: Android 에뮬레이터에서 검색 → 관심 등록 → 정렬 → 상세 조회 → 기간 변경과 차트 확인 → 관심 해제 → 재실행 후 저장 상태 확인 흐름 통과
 
 ## 화면 흐름
 
@@ -168,6 +176,7 @@ lib/
 - 동일한 상세 또는 기간 요청의 중복 호출 방지
 - 일부 관심 종목의 시세가 실패해도 정상 데이터 유지
 - 시세 새로고침 실패 시 마지막 정상 가격 유지
+- 현재가순·등락률순 정렬에서 아직 시세를 받지 못한 행은 확인 가능한 종목을 우선 보여주기 위해 목록 마지막에 배치
 - 일봉 후속 페이지가 실패하면 앞에서 받은 데이터 유지
 - 빈 일봉 페이지 이후 추가 요청 중단
 - 사용자 화면에는 정리된 오류 문구를 표시하고 디버그 로그에는 실제 예외와 스택 출력
@@ -250,7 +259,6 @@ UI와 캔들 차트는 별도의 UI·차트 패키지 없이 Flutter 위젯과 `
 | [`docs/NAVER_API.md`](docs/NAVER_API.md) | 제공된 Naver 데이터 연동 가이드 |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 폴더 구조, 데이터 계약과 캐시 기준 |
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | 브랜치별 구현 순서 |
-| [`docs/CODE_FLOW_GUIDE.md`](docs/CODE_FLOW_GUIDE.md) | Flutter 코드의 실제 실행 흐름과 웹 개념 대응 |
 | [`lib/theme/README.md`](lib/theme/README.md) | Figma 디자인 토큰과 Dart 필드 대응표 |
 
 ## 라이선스 및 공개 범위
